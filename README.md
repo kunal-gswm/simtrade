@@ -178,8 +178,8 @@ All changes go through a pull request into `main` with at least one review appro
 
 | Milestone | Deadline | Status |
 |---|---|---|
-| Review 1 (33 marks) — auth, DB layer, price feed, thread-safe trading, JDBC transactions | 10 Oct 2026 | In progress |
-| Review 2 (17 marks) — order book, matching engine, reports, polish | 15 Nov 2026 | Not started |
+| Review 1 — auth, DB layer, price feed, thread-safe trading, JDBC transactions | 10 Oct 2026 | In progress |
+| Review 2 — order book, matching engine, reports, polish | 15 Nov 2026 | Not started |
 
 ## License
 
