@@ -68,4 +68,11 @@ public abstract class Order {
     public void setStatus(Status status) {
         this.status = status;
     }
+    public void reduceQuantity(int amount) {
+        this.quantity -= amount;
+    }
+
+    public boolean isFullyFilled() {
+        return this.quantity <= 0;
+    }
 }

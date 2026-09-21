@@ -39,6 +39,13 @@ public class OrderBook {
     public LimitOrder peekBestSell() {
         return sellOrders.peek();
     }
+    public LimitOrder pollBestBuy() {
+        return buyOrders.poll();
+    }
+
+    public LimitOrder pollBestSell() {
+        return sellOrders.poll();
+    }
 
     public void printBook() {
         System.out.println("BUY side (best first): " + buyOrders);

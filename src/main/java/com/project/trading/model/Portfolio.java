@@ -8,10 +8,11 @@ public class Portfolio {
     private List<Holding> holdings;
     private double cashBalance;
 
-    public Portfolio(int userId, List<Holding> holdings) {
-        this.userId = userId;
-        this.holdings = holdings;
-    }
+    public Portfolio(int userId, List<Holding> holdings, double cashBalance) {
+    this.userId = userId;
+    this.holdings = holdings;
+    this.cashBalance = cashBalance;
+}
 
     public int getUserId() {
         return userId;
