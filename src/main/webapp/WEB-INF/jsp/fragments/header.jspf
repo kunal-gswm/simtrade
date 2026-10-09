@@ -1,0 +1,70 @@
+<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+
+<!-- Permanent PRD Simulator Disclaimer Banner -->
+<div class="disclaimer-banner">
+    ⚠️ Paper trading simulator. Virtual money. Mock prices. Not real market data.
+</div>
+
+<!-- Main Top Navigation -->
+<nav class="navbar">
+    <a href="${pageContext.request.contextPath}/" class="nav-brand">
+        <span class="brand-badge">PRO</span> SimTrade
+    </a>
+
+    <ul class="nav-links">
+        <c:choose>
+            <c:when test="${empty sessionScope.AuthUser}">
+                <li><a href="${pageContext.request.contextPath}/login">Login</a></li>
+                <li><a href="${pageContext.request.contextPath}/register">Register</a></li>
+            </c:when>
+
+            <c:when test="${sessionScope.AuthUser.role == 'ADMIN'}">
+                <li><a href="${pageContext.request.contextPath}/admin/dashboard">Admin Dashboard</a></li>
+                <li><a href="${pageContext.request.contextPath}/admin/users">Users</a></li>
+                <li><a href="${pageContext.request.contextPath}/admin/stocks">Stocks</a></li>
+                <li><a href="${pageContext.request.contextPath}/admin/prices">Prices &amp; Tools</a></li>
+                <li><a href="${pageContext.request.contextPath}/admin/trades">All Trades</a></li>
+            </c:when>
+
+            <c:otherwise>
+                <li><a href="${pageContext.request.contextPath}/app/dashboard">Dashboard</a></li>
+                <li><a href="${pageContext.request.contextPath}/app/market">Market</a></li>
+                <li><a href="${pageContext.request.contextPath}/app/portfolio">Portfolio</a></li>
+                <li><a href="${pageContext.request.contextPath}/app/history">History</a></li>
+                <li><a href="${pageContext.request.contextPath}/app/profile">Profile</a></li>
+            </c:otherwise>
+        </c:choose>
+    </ul>
+
+    <c:if test="${not empty sessionScope.AuthUser}">
+        <div class="nav-user">
+            <span class="role-tag ${sessionScope.AuthUser.role == 'ADMIN' ? 'role-admin' : 'role-user'}">
+                <c:out value="${sessionScope.AuthUser.role}" />
+            </span>
+            <span style="font-size: 0.9rem; font-weight: 500;">
+                <c:out value="${sessionScope.AuthUser.username}" />
+            </span>
+            <a href="${pageContext.request.contextPath}/logout" class="btn btn-secondary btn-sm">Logout</a>
+        </div>
+    </c:if>
+</nav>
+
+<!-- Flash Message Notifications -->
+<div class="container" style="padding-top: 20px; padding-bottom: 0;">
+    <c:if test="${not empty sessionScope.flashSuccess}">
+        <div class="alert alert-success">
+            <span>✅ <c:out value="${sessionScope.flashSuccess}" /></span>
+        </div>
+        <c:remove scope="session" var="flashSuccess" />
+    </c:if>
+
+    <c:if test="${not empty sessionScope.flashError}">
+        <div class="alert alert-danger">
+            <span>❌ <c:out value="${sessionScope.flashError}" /></span>
+        </div>
+        <c:remove scope="session" var="flashError" />
+    </c:if>
+</div>
