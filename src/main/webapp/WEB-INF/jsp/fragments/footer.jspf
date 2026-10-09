@@ -1,8 +1,9 @@
-<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
-<footer class="footer">
-    <div style="max-width: 1200px; margin: 0 auto;">
-        SimTrade &copy; <%= java.time.Year.now().getValue() %> &middot; Paper Trading Simulation Platform &middot; Academic Demonstration
+        </section>
     </div>
-</footer>
+    <footer class="footer">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            SimTrade &copy; <%= java.time.Year.now().getValue() %> &middot; Paper Trading Simulation Platform &middot; Academic Demonstration
+        </div>
+    </footer>
 </body>
 </html>
