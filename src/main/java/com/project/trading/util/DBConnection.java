@@ -17,7 +17,7 @@ public class DBConnection {
             if (in != null) {
                 props.load(in);
             }
-            // Class.forName("com.mysql.cj.jdbc.Driver"); // Usually not required for JDBC 4.0+
+            Class.forName("com.mysql.cj.jdbc.Driver");
             
             URL = props.getProperty("db.url");
             USER = props.getProperty("db.user");
