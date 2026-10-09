@@ -37,8 +37,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import com.vaadin.flow.component.combobox.ComboBox;
 
-@Route(value = "market", layout = MainLayout.class)
-@RouteAlias(value = "", layout = MainLayout.class)
+@Route(value = "ui/market", layout = MainLayout.class)
+@RouteAlias(value = "ui", layout = MainLayout.class)
 @PageTitle("Market | SimTrade")
 public class MarketView extends Div {
 
@@ -191,8 +191,8 @@ public class MarketView extends Div {
         updateList();
         updateSummary();
 
-        // Auto-refresh prices every 2 seconds
-        com.vaadin.flow.component.UI.getCurrent().setPollInterval(2000);
+        // Auto-refresh prices every 1 second
+        com.vaadin.flow.component.UI.getCurrent().setPollInterval(1000);
         com.vaadin.flow.component.UI.getCurrent().addPollListener(e -> {
             updateList();
             updateSummary();
@@ -312,6 +312,7 @@ public class MarketView extends Div {
         // Estimated total
         Div estDiv = new Div();
         estDiv.addClassName("st-dialog-estimate");
+        
         Div estRow = new Div();
         estRow.addClassName("st-dialog-row");
         Span estLabel = new Span("Estimated Order Value");
@@ -319,11 +320,42 @@ public class MarketView extends Div {
         Span estValue = new Span(currencyFormat.format(stock.getPrice()));
         estValue.addClassName("st-dialog-row-value");
         estRow.add(estLabel, estValue);
-        estDiv.add(estRow);
+        
+        Div remCashRow = new Div();
+        remCashRow.addClassName("st-dialog-row");
+        Span remCashLabel = new Span("Estimated Remaining Cash");
+        remCashLabel.addClassName("st-dialog-row-label");
+        Span remCashValue = new Span("-");
+        remCashValue.addClassName("st-dialog-row-value");
+        remCashRow.add(remCashLabel, remCashValue);
+
+        try {
+            Portfolio p = portfolioService.getPortfolioForUser(user.getId());
+            PortfolioService.PortfolioSummary s = portfolioService.buildSummary(p);
+            double remainingCash = s.cash - stock.getPrice().doubleValue();
+            remCashValue.setText(currencyFormat.format(remainingCash));
+            if (remainingCash < 0) {
+                remCashValue.addClassName("st-negative");
+            }
+        } catch (DataAccessException ignored) { }
+
+        estDiv.add(estRow, remCashRow);
 
         qtyField.addValueChangeListener(e -> {
             if (e.getValue() != null && e.getValue() > 0) {
-                estValue.setText(currencyFormat.format(stock.getPrice().multiply(new BigDecimal(e.getValue()))));
+                BigDecimal totalCost = stock.getPrice().multiply(new BigDecimal(e.getValue()));
+                estValue.setText(currencyFormat.format(totalCost));
+                try {
+                    Portfolio p = portfolioService.getPortfolioForUser(user.getId());
+                    PortfolioService.PortfolioSummary s = portfolioService.buildSummary(p);
+                    double remaining = s.cash - totalCost.doubleValue();
+                    remCashValue.setText(currencyFormat.format(remaining));
+                    if (remaining < 0) {
+                        remCashValue.addClassName("st-negative");
+                    } else {
+                        remCashValue.removeClassName("st-negative");
+                    }
+                } catch (DataAccessException ignored) { }
             }
         });
 

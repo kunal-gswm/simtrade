@@ -10,7 +10,7 @@ public class DashboardViewTest {
     public void testDashboardRoute() {
         Route route = DashboardView.class.getAnnotation(Route.class);
         assertNotNull(route, "DashboardView should have a @Route annotation");
-        assertEquals("dashboard", route.value(), "Dashboard route should be 'dashboard'");
+        assertEquals("ui/dashboard", route.value(), "Dashboard route should be 'ui/dashboard'");
         assertEquals(MainLayout.class, route.layout(), "Dashboard should use MainLayout");
     }
 }
