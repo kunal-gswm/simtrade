@@ -18,24 +18,20 @@ import java.util.List;
 public class AdminTradesServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 
-    private final TradeDAO tradeDAO;
+    private final com.project.trading.service.AdminService adminService;
 
     public AdminTradesServlet() {
-        this.tradeDAO = new TradeDAO();
+        this.adminService = new com.project.trading.service.AdminService();
     }
 
-    public AdminTradesServlet(TradeDAO tradeDAO) {
-        this.tradeDAO = tradeDAO;
+    public AdminTradesServlet(com.project.trading.service.AdminService adminService) {
+        this.adminService = adminService;
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        try (Connection c = DBConnection.getConnection()) {
-            List<Trade> trades = tradeDAO.findRecent(c, 200);
-            req.setAttribute("trades", trades);
-            forward(req, resp, "admin/trades.jsp");
-        } catch (SQLException e) {
-            throw new DataAccessException("Failed to load platform trade history.", e);
-        }
+        List<Trade> trades = adminService.getRecentTrades(200);
+        req.setAttribute("trades", trades);
+        forward(req, resp, "admin/trades.jsp");
     }
 }
