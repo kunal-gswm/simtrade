@@ -274,6 +274,29 @@ tr:hover td {
   color: var(--tv-bull-light);
   border: 1px solid var(--tv-bull);
 }
+/* Stat summary tiles (dashboard, portfolio) */
+.stat-card {
+  background: var(--tv-bg-card);
+  border: 1px solid var(--tv-border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.stat-label {
+  color: var(--tv-text-secondary);
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: var(--tv-font-mono);
+  color: var(--tv-text-heading);
+}
+
 .flash-message.error {
   background: var(--tv-bear-bg);
   color: var(--tv-bear-light);

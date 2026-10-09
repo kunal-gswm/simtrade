@@ -2,59 +2,117 @@ package com.project.trading;
 
 import com.project.trading.service.PnLCalculator;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.math.BigDecimal;
-
+/**
+ * Unit tests for PnLCalculator.
+ * Dev 4 — T37. Run with: mvn test -Dtest=PnLCalculatorTest
+ */
 public class PnLCalculatorTest {
 
+    // ── calculateInvested ────────────────────────────────────────────────────
+
     @Test
-    public void testCalculateInvested() {
-        BigDecimal result = PnLCalculator.calculateInvested(10, new BigDecimal("3900.0000"));
-        assertEquals(new BigDecimal("39000.00"), result);
+    void testCalculateInvested_normal() {
+        assertEquals(39000.00, PnLCalculator.calculateInvested(10, 3900.00), 0.001);
     }
 
     @Test
-    public void testCalculateCurrentValue() {
-        BigDecimal result = PnLCalculator.calculateCurrentValue(10, new BigDecimal("4000.00"));
-        assertEquals(new BigDecimal("40000.00"), result);
+    void testCalculateInvested_zeroQty() {
+        assertEquals(0.00, PnLCalculator.calculateInvested(0, 3900.00), 0.001);
     }
 
     @Test
-    public void testCalculateUnrealizedPnl() {
-        BigDecimal currentValue = new BigDecimal("40000.00");
-        BigDecimal invested = new BigDecimal("39000.00");
-        BigDecimal result = PnLCalculator.calculateUnrealizedPnl(currentValue, invested);
-        assertEquals(new BigDecimal("1000.00"), result);
+    void testCalculateInvested_fractionalPrice() {
+        // 7 shares @ ₹542.80 = ₹3799.60
+        assertEquals(3799.60, PnLCalculator.calculateInvested(7, 542.80), 0.001);
+    }
+
+    // ── calculateCurrentValue ─────────────────────────────────────────────────
+
+    @Test
+    void testCalculateCurrentValue_normal() {
+        assertEquals(40000.00, PnLCalculator.calculateCurrentValue(10, 4000.00), 0.001);
     }
 
     @Test
-    public void testCalculateUnrealizedPct() {
-        BigDecimal unrealized = new BigDecimal("1000.00");
-        BigDecimal invested = new BigDecimal("39000.00");
-        BigDecimal result = PnLCalculator.calculateUnrealizedPct(unrealized, invested);
-        // 1000 / 39000 * 100 = 2.564... -> 2.56
-        assertEquals(new BigDecimal("2.56"), result);
+    void testCalculateCurrentValue_zeroPrice() {
+        assertEquals(0.00, PnLCalculator.calculateCurrentValue(10, 0.0), 0.001);
+    }
+
+    // ── calculateUnrealizedPnl ────────────────────────────────────────────────
+
+    @Test
+    void testCalculateUnrealizedPnl_profit() {
+        assertEquals(1000.00, PnLCalculator.calculateUnrealizedPnl(40000.00, 39000.00), 0.001);
     }
 
     @Test
-    public void testCalculateUnrealizedPctZeroInvested() {
-        BigDecimal result = PnLCalculator.calculateUnrealizedPct(new BigDecimal("100.00"), BigDecimal.ZERO);
-        assertEquals(new BigDecimal("0.00"), result);
+    void testCalculateUnrealizedPnl_loss() {
+        assertEquals(-1000.00, PnLCalculator.calculateUnrealizedPnl(38000.00, 39000.00), 0.001);
     }
 
     @Test
-    public void testCalculateNetWorth() {
-        BigDecimal cash = new BigDecimal("20000.00");
-        BigDecimal totalCurrentValue = new BigDecimal("81900.00");
-        BigDecimal result = PnLCalculator.calculateNetWorth(cash, totalCurrentValue);
-        assertEquals(new BigDecimal("101900.00"), result);
+    void testCalculateUnrealizedPnl_zero() {
+        assertEquals(0.00, PnLCalculator.calculateUnrealizedPnl(39000.00, 39000.00), 0.001);
+    }
+
+    // ── calculateUnrealizedPct ────────────────────────────────────────────────
+
+    @Test
+    void testCalculateUnrealizedPct_normal() {
+        // 1000 / 39000 * 100 = 2.56%
+        assertEquals(2.56, PnLCalculator.calculateUnrealizedPct(1000.00, 39000.00), 0.001);
     }
 
     @Test
-    public void testCalculateOverallPnl() {
-        BigDecimal netWorth = new BigDecimal("103500.00");
-        BigDecimal result = PnLCalculator.calculateOverallPnl(netWorth);
-        assertEquals(new BigDecimal("3500.00"), result);
+    void testCalculateUnrealizedPct_zeroInvested() {
+        assertEquals(0.00, PnLCalculator.calculateUnrealizedPct(100.00, 0.00), 0.001);
+    }
+
+    @Test
+    void testCalculateUnrealizedPct_negative() {
+        assertEquals(-2.56, PnLCalculator.calculateUnrealizedPct(-1000.00, 39000.00), 0.001);
+    }
+
+    // ── calculateNetWorth ─────────────────────────────────────────────────────
+
+    @Test
+    void testCalculateNetWorth_normal() {
+        assertEquals(101900.00, PnLCalculator.calculateNetWorth(20000.00, 81900.00), 0.001);
+    }
+
+    @Test
+    void testCalculateNetWorth_zeroCash() {
+        assertEquals(81900.00, PnLCalculator.calculateNetWorth(0.0, 81900.00), 0.001);
+    }
+
+    @Test
+    void testCalculateNetWorth_noHoldings() {
+        assertEquals(100000.00, PnLCalculator.calculateNetWorth(100000.00, 0.0), 0.001);
+    }
+
+    // ── calculateOverallPnl ───────────────────────────────────────────────────
+
+    @Test
+    void testCalculateOverallPnl_profit() {
+        assertEquals(3500.00, PnLCalculator.calculateOverallPnl(103500.00), 0.001);
+    }
+
+    @Test
+    void testCalculateOverallPnl_loss() {
+        assertEquals(-2000.00, PnLCalculator.calculateOverallPnl(98000.00), 0.001);
+    }
+
+    @Test
+    void testCalculateOverallPnl_breakeven() {
+        assertEquals(0.00, PnLCalculator.calculateOverallPnl(100000.00), 0.001);
+    }
+
+    // ── round2 helper ─────────────────────────────────────────────────────────
+
+    @Test
+    void testRound2_roundsHalfUp() {
+        assertEquals(1.24, PnLCalculator.round2(1.235), 0.0001);
     }
 }

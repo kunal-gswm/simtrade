@@ -1,49 +1,51 @@
 package com.project.trading.service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
+/**
+ * Pure math utility for P&L calculations.
+ * All arithmetic uses double (matching the model layer) with rounding to 2dp.
+ *
+ * Dev 4 — T37.
+ */
 public class PnLCalculator {
-    
-    private PnLCalculator() {
-        // Prevent instantiation
+
+    private PnLCalculator() {}
+
+    /** Total cost of buying qty shares at avgBuyPrice. */
+    public static double calculateInvested(int qty, double avgBuyPrice) {
+        return round2(qty * avgBuyPrice);
     }
 
-    public static BigDecimal calculateInvested(int qty, BigDecimal avgBuyPrice) {
-        if (avgBuyPrice == null) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        return BigDecimal.valueOf(qty)
-                .multiply(avgBuyPrice)
-                .setScale(2, RoundingMode.HALF_UP);
+    /** Market value of qty shares at currentPrice. */
+    public static double calculateCurrentValue(int qty, double currentPrice) {
+        return round2(qty * currentPrice);
     }
 
-    public static BigDecimal calculateCurrentValue(int qty, BigDecimal currentPrice) {
-        if (currentPrice == null) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        return BigDecimal.valueOf(qty)
-                .multiply(currentPrice)
-                .setScale(2, RoundingMode.HALF_UP);
+    /** Unrealized gain/loss = currentValue - invested. */
+    public static double calculateUnrealizedPnl(double currentValue, double invested) {
+        return round2(currentValue - invested);
     }
 
-    public static BigDecimal calculateUnrealizedPnl(BigDecimal currentValue, BigDecimal invested) {
-        if (currentValue == null || invested == null) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        return currentValue.subtract(invested).setScale(2, RoundingMode.HALF_UP);
+    /** Unrealized P&L as a percentage of amount invested. Returns 0 if invested is 0. */
+    public static double calculateUnrealizedPct(double unrealized, double invested) {
+        if (invested == 0) return 0.0;
+        return round2((unrealized / invested) * 100.0);
     }
 
-    public static BigDecimal calculateUnrealizedPct(BigDecimal unrealized, BigDecimal invested) {
-        if (invested == null || invested.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
-        return unrealized.multiply(new BigDecimal("100"))
-                .divide(invested, 2, RoundingMode.HALF_UP);
+    /** Net worth = cash in hand + total current market value of holdings. */
+    public static double calculateNetWorth(double cash, double totalCurrentValue) {
+        return round2(cash + totalCurrentValue);
     }
 
-    public static BigDecimal calculateNetWorth(BigDecimal cash, BigDecimal totalCurrentValue) {
-        if (cash == null) cash = BigDecimal.ZERO;
-        if (totalCurrentValue == null) totalCurrentValue = BigDecimal.ZERO;
-        return cash.add(totalCurrentValue).setScale(2, RoundingMode.HALF_UP);
+    /**
+     * Overall P&L = net worth − starting capital.
+     * Starting capital for Sim Trade is always ₹1,00,000.
+     */
+    public static double calculateOverallPnl(double netWorth) {
+        return round2(netWorth - 100_000.0);
     }
 
-    public static BigDecimal calculateOverallPnl(BigDecimal netWorth) {
-        if (netWorth == null) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        return netWorth.subtract(new BigDecimal("100000.00")).setScale(2, RoundingMode.HALF_UP);
+    /** Helper — round to 2 decimal places using HALF_UP. */
+    public static double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }

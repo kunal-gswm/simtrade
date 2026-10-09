@@ -1,54 +1,47 @@
 <%@ include file="/WEB-INF/jsp/fragments/header.jspf" %>
-<div class="card" style="margin: 20px auto; max-width: 1200px;">
-    <h2>Trade History</h2>
-    
-    <c:choose>
-        <c:when test="${empty trades}">
-            <p style="color: var(--tv-text-secondary);">empty message</p>
-        </c:when>
-        <c:otherwise>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Type</th>
-                        <th>Symbol</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total Amount</th>
-                        <th>Realized P&L</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <c:forEach var="trade" items="${trades}">
-                        <tr>
-                            <td><c:out value="${trade.executedAt}"/></td>
-                            <td class="${trade.type == 'BUY' ? 'bull-text' : 'bear-text'}">
-                                <span class="badge ${trade.type == 'BUY' ? 'badge-blue' : ''}" style="${trade.type == 'SELL' ? 'color: var(--tv-bear); border-color: var(--tv-bear);' : ''}">
-                                    <c:out value="${trade.type}"/>
-                                </span>
-                            </td>
-                            <td><a href="${pageContext.request.contextPath}/app/stock?id=${trade.stockId}" style="font-weight:600;"><c:out value="${trade.stockSymbol}"/></a></td>
-                            <td><c:out value="${trade.quantity}"/></td>
-                            <td>₹<fmt:formatNumber value="${trade.price}" type="number" minFractionDigits="2" maxFractionDigits="2" groupingUsed="true"/></td>
-                            <td>₹<fmt:formatNumber value="${trade.totalAmount}" type="number" minFractionDigits="2" maxFractionDigits="2" groupingUsed="true"/></td>
-                            <td>
-                                <c:choose>
-                                    <c:when test="${trade.type == 'SELL'}">
-                                        <span class="${trade.realizedPnl >= 0 ? 'bull-text' : 'bear-text'}">
-                                            <c:if test="${trade.realizedPnl > 0}">+</c:if>₹<fmt:formatNumber value="${trade.realizedPnl}" type="number" minFractionDigits="2" maxFractionDigits="2" groupingUsed="true"/>
-                                        </span>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <span style="color: var(--tv-text-secondary);">-</span>
-                                    </c:otherwise>
-                                </c:choose>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                </tbody>
-            </table>
-        </c:otherwise>
-    </c:choose>
+<div class="card" style="max-width: 1200px; margin: 20px auto;">
+    <h2 style="margin-bottom: 20px;">Trade History</h2>
+    <%
+        java.util.List<com.project.trading.model.TradeOrder> trades =
+            (java.util.List<com.project.trading.model.TradeOrder>) request.getAttribute("trades");
+        if (trades == null || trades.isEmpty()) {
+    %>
+        <p style="color: var(--tv-text-secondary);">No trades have been executed yet. <a href="<%= request.getContextPath() %>/dashboard">Go trade &rarr;</a></p>
+    <%  } else { %>
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Order ID</th>
+                <th>Type</th>
+                <th>Symbol</th>
+                <th>Order Type</th>
+                <th>Qty</th>
+                <th>Price (&#8377;)</th>
+                <th>Total (&#8377;)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        <% for (com.project.trading.model.TradeOrder t : trades) { %>
+            <tr>
+                <td><%= t.getTimestamp() %></td>
+                <td style="font-size:0.75rem; color:var(--tv-text-secondary);"><%= t.getOrderId() %></td>
+                <td class="<%= "BUY".equals(t.getSide()) ? "bull-text" : "bear-text" %>">
+                    <span class="badge" style="color:<%= "BUY".equals(t.getSide()) ? "var(--tv-blue)" : "var(--tv-bear)" %>; border-color:currentColor;">
+                        <%= t.getSide() %>
+                    </span>
+                </td>
+                <td><strong><%= t.getSymbol() %></strong></td>
+                <td style="color:var(--tv-text-secondary);"><%= t.getOrderType() %></td>
+                <td><%= t.getQuantity() %></td>
+                <td><%= String.format("%,.2f", t.getPrice()) %></td>
+                <td><%= String.format("%,.2f", t.getTotalAmount()) %></td>
+                <td style="color:var(--tv-bull-light);"><%= t.getStatus() %></td>
+            </tr>
+        <% } %>
+        </tbody>
+    </table>
+    <% } %>
 </div>
 <%@ include file="/WEB-INF/jsp/fragments/footer.jspf" %>
