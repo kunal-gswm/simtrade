@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public abstract class BaseServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
 
     protected AuthUser currentUser(HttpServletRequest req) {
         return SessionUtil.getAuthUser(req);

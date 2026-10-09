@@ -1,6 +1,7 @@
 package com.project.trading.exception;
 
 public class InsufficientHoldingsException extends AppException {
+    private static final long serialVersionUID = 1L;
     private final int held;
     private final int requested;
 

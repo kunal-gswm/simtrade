@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sim Trade — Supercharts (Preview)</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- TradingView UI Styles -->
+    <link rel="stylesheet" href="./css/simtrade-nse.css">
+</head>
+<body>
+
+    <!-- 1. Top Navbar -->
+    <nav class="tv-top-nav">
+        <div class="tv-nav-left">
+            <a href="#" class="tv-brand">
+                <div class="tv-logo-icon">S</div>
+                SimTrade
+            </a>
+            <div class="tv-symbol-search" id="topSymbolSearch">
+                <span style="font-size: 1rem; color: var(--tv-text-heading);">🔍</span>
+                <strong id="navActiveSymbol">RELIANCE</strong>
+                <span>⊕</span>
+            </div>
+            <div class="nav-divider"></div>
+            <div style="display: flex; gap: 2px;">
+                <button class="tv-icon-btn">1M</button>
+                <button class="tv-icon-btn">5M</button>
+                <button class="tv-icon-btn">15M</button>
+                <button class="tv-icon-btn">1H</button>
+                <button class="tv-icon-btn active">D</button>
+            </div>
+            <div class="nav-divider"></div>
+            <button class="tv-icon-btn active" title="Candles">🕯️</button>
+            <button class="tv-icon-btn" title="Indicators">fx Indicators</button>
+            <button class="tv-icon-btn" title="Indicator Templates">⊞</button>
+            <div class="nav-divider"></div>
+            <button class="tv-icon-btn" title="Alert">⏰ Alert</button>
+            <button class="tv-icon-btn" title="Replay">⏪ Replay</button>
+        </div>
+        
+        <div class="tv-nav-right">
+            <button class="tv-icon-btn" title="Undo">↩</button>
+            <button class="tv-icon-btn" title="Redo">↪</button>
+            <div class="nav-divider"></div>
+            <button class="tv-icon-btn" title="Select Layout">◧</button>
+            <button class="tv-icon-btn" title="Quick Search">🔍</button>
+            <button class="tv-icon-btn" title="Settings">⚙</button>
+            <button class="tv-icon-btn" title="Fullscreen">⛶</button>
+            <button class="tv-icon-btn" title="Take a snapshot">📷</button>
+            <div class="nav-divider"></div>
+            <button class="tv-trade-btn">Trade</button>
+        </div>
+    </nav>
+
+    <!-- 2. Main Flex Container -->
+    <div class="tv-main-container">
+        
+        <!-- Left Drawing Toolbar -->
+        <aside class="tv-left-toolbar">
+            <button class="tv-tool-icon active" title="Crosshair">✛</button>
+            <button class="tv-tool-icon" title="Trend Line">╱</button>
+            <button class="tv-tool-icon" title="Gann and Fibonacci">≡</button>
+            <button class="tv-tool-icon" title="Geometric Shapes">🖌</button>
+            <button class="tv-tool-icon" title="Annotation Tools">T</button>
+            <button class="tv-tool-icon" title="Patterns">∿</button>
+            <button class="tv-tool-icon" title="Prediction and Measurement">📏</button>
+            <button class="tv-tool-icon" title="Zoom In">⊕</button>
+            <div style="flex:1;"></div>
+            <button class="tv-tool-icon" title="Magnet Mode">🧲</button>
+            <button class="tv-tool-icon" title="Stay in Drawing Mode">🔒</button>
+            <button class="tv-tool-icon" title="Hide All Drawings">👁</button>
+            <button class="tv-tool-icon" title="Remove Drawings">🗑</button>
+        </aside>
+
+        <!-- Center Chart Area -->
+        <section class="tv-chart-container">
+            <div class="chart-watermark">Sim Trade</div>
+            
+            <div class="chart-legend">
+                <div class="chart-legend-title">
+                    <span id="chartLegendSymbol" class="ticker">RELIANCE</span>
+                    <span class="exchange">NSE</span>
+                    <span class="market-status">● Market open</span>
+                </div>
+                <div class="chart-legend-ohlc bull" id="chartLegendOhlc">
+                    <div>O <span id="legO">2942.00</span></div>
+                    <div>H <span id="legH">2998.00</span></div>
+                    <div>L <span id="legL">2935.00</span></div>
+                    <div>C <span id="legC">2985.50</span></div>
+                    <div>
+                        <span id="legChg">+43.50</span>
+                        (<span id="legChgP">+1.48%</span>)
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-canvas-wrapper" id="chartWrapper">
+                <canvas id="tradingViewCanvas"></canvas>
+            </div>
+
+            <div class="chart-bottom-axis">
+                <div class="axis-timeframes">
+                    <button class="axis-tf-btn">1D</button>
+                    <button class="axis-tf-btn">5D</button>
+                    <button class="axis-tf-btn">1M</button>
+                    <button class="axis-tf-btn">3M</button>
+                    <button class="axis-tf-btn">6M</button>
+                    <button class="axis-tf-btn">YTD</button>
+                    <button class="axis-tf-btn active">1Y</button>
+                    <button class="axis-tf-btn">5Y</button>
+                    <button class="axis-tf-btn">ALL</button>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--tv-text-secondary); display: flex; gap: 8px;">
+                    <span id="currentTimeDisplay">--:--:--</span>
+                    <span>UTC+5:30</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel (Watchlist & Details) -->
+        <aside class="tv-right-panel">
+            <div class="right-panel-header">
+                <div class="right-panel-title">Watchlist</div>
+                <div class="right-panel-actions">
+                    <span style="cursor:pointer;" title="Add Symbol">➕</span>
+                    <span style="cursor:pointer;" title="Advanced View">⊞</span>
+                    <span style="cursor:pointer;" title="More">⋮</span>
+                </div>
+            </div>
+            
+            <div class="watchlist-header">
+                <span>Symbol</span>
+                <span>Last</span>
+                <span>Chg</span>
+                <span>Chg%</span>
+            </div>
+            
+            <div class="watchlist-container" id="watchlistContainer">
+                
+                <div class="watchlist-item">
+                    <div class="wl-symbol">
+                        <span class="badge badge-blue">ID</span>
+                        NIFTY
+                    </div>
+                    <div class="wl-last bull-text">24825.40</div>
+                    <div class="wl-chg bull-text">+182.35</div>
+                    <div class="wl-chgp bull-text">+0.74%</div>
+                </div>
+                
+                <div style="padding: 8px 16px; font-size: 0.65rem; color: var(--tv-text-secondary); font-weight: 700; background: var(--tv-bg-card);">
+                    ▼ STOCKS
+                </div>
+                
+                <div class="watchlist-item active stock-row" 
+                     data-symbol="RELIANCE" data-name="Reliance Industries Ltd."
+                     data-price="2985.50" data-change="43.50" data-changep="1.48"
+                     data-high="2998.00" data-low="2935.00" data-open="2942.00">
+                    <div class="wl-symbol">
+                        <span class="badge" style="color:var(--tv-gold)">EQ</span>
+                        RELIANCE
+                    </div>
+                    <div class="wl-last bull-text">2985.50</div>
+                    <div class="wl-chg bull-text">43.50</div>
+                    <div class="wl-chgp bull-text">1.48%</div>
+                </div>
+
+                <div class="watchlist-item stock-row" 
+                     data-symbol="TCS" data-name="Tata Consultancy Services"
+                     data-price="4250.75" data-change="40.75" data-changep="0.97"
+                     data-high="4275.00" data-low="4195.00" data-open="4210.00">
+                    <div class="wl-symbol">
+                        <span class="badge" style="color:var(--tv-gold)">EQ</span>
+                        TCS
+                    </div>
+                    <div class="wl-last bull-text">4250.75</div>
+                    <div class="wl-chg bull-text">40.75</div>
+                    <div class="wl-chgp bull-text">0.97%</div>
+                </div>
+
+                <div class="watchlist-item stock-row" 
+                     data-symbol="WIPRO" data-name="Wipro Limited"
+                     data-price="542.80" data-change="-8.40" data-changep="-1.52"
+                     data-high="554.00" data-low="539.00" data-open="551.20">
+                    <div class="wl-symbol">
+                        <span class="badge" style="color:var(--tv-gold)">EQ</span>
+                        WIPRO
+                    </div>
+                    <div class="wl-last bear-text">542.80</div>
+                    <div class="wl-chg bear-text">-8.40</div>
+                    <div class="wl-chgp bear-text">-1.52%</div>
+                </div>
+            </div>
+
+            <div class="details-widget">
+                <div class="details-header">
+                    <div class="details-symbol" id="detSymbol">RELIANCE</div>
+                    <div class="details-name" id="detName">Reliance Industries Ltd. • NSE</div>
+                </div>
+                <div class="details-price-row">
+                    <div class="details-price bull-text" id="detPrice">2985.50</div>
+                    <div class="details-change bull-text" id="detChange">+43.50 (+1.48%)</div>
+                </div>
+                <div class="details-stats">
+                    <div style="font-weight: 600; color: var(--tv-text-heading); margin-bottom: 4px;">Performance</div>
+                    <div class="stat-row">
+                        <span>Day's Range</span>
+                        <span><span id="detLow">2935.00</span> - <span id="detHigh">2998.00</span></span>
+                    </div>
+                    <div class="stat-row">
+                        <span>52W Range</span>
+                        <span>2220.30 - 3024.90</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Volume</span>
+                        <span>4,280,190</span>
+                    </div>
+                    <div style="margin-top: 10px; padding: 8px; background: var(--tv-blue-soft); border-radius: 4px; color: var(--tv-text-primary); font-size: 0.75rem;">
+                        <span style="color: var(--tv-blue); font-weight: 600;">News</span> • 1 hour ago<br>
+                        Top brokerages upgrade <span id="detNewsSymbol">RELIANCE</span> target price after robust quarterly performance.
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Rightmost Nav Strip -->
+        <nav class="tv-rightmost-nav">
+            <button class="tv-tool-icon active" title="Watchlist and details">📄</button>
+            <button class="tv-tool-icon" title="Alerts">⏰</button>
+            <button class="tv-tool-icon" title="Data Window">🗄</button>
+            <button class="tv-tool-icon" title="Hotlists">🔥</button>
+            <button class="tv-tool-icon" title="Calendar">📅</button>
+            <div style="flex:1;"></div>
+            <button class="tv-tool-icon" title="Object Tree">🌳</button>
+            <button class="tv-tool-icon" title="Help">❓</button>
+        </nav>
+    </div>
+
+    <script src="./js/simtrade-nse.js"></script>
+</body>
+</html>
