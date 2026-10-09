@@ -24,6 +24,15 @@ public class StatsDAO {
             }
         }
 
+        // 1.5 Active users
+        String sqlActiveUsers = "SELECT COUNT(*) FROM users WHERE status = 'ACTIVE'";
+        try (PreparedStatement ps = c.prepareStatement(sqlActiveUsers);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                stats.setActiveUsers(rs.getInt(1));
+            }
+        }
+
         // 2. Active stocks
         String sqlStocks = "SELECT COUNT(*) FROM stocks WHERE is_active = 1";
         try (PreparedStatement ps = c.prepareStatement(sqlStocks);

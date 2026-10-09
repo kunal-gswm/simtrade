@@ -19,12 +19,19 @@ public class AuthInitListener implements VaadinServiceInitListener {
         SecurityService securityService = new SecurityService();
         AuthUser user = securityService.getAuthenticatedUser();
 
+        String path = event.getLocation().getPath();
+        boolean isAdminRoute = path.startsWith("admin");
+
         if (!LoginView.class.equals(event.getNavigationTarget()) 
             && !com.project.trading.ui.views.RegistrationView.class.equals(event.getNavigationTarget()) 
             && user == null) {
             event.forwardTo(LoginView.class);
-        } else if (LoginView.class.equals(event.getNavigationTarget()) && user != null) {
-            event.forwardTo(""); // redirect authenticated users away from login
+        } else if (user != null) {
+            if (LoginView.class.equals(event.getNavigationTarget())) {
+                event.forwardTo(""); // redirect authenticated users away from login
+            } else if (isAdminRoute && user.getRole() != com.project.trading.model.Role.ADMIN) {
+                event.forwardTo(""); // redirect ordinary users away from admin routes
+            }
         }
     }
 }

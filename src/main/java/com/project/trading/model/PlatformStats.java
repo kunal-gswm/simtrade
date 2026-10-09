@@ -5,6 +5,7 @@ import java.util.Map;
 
 public class PlatformStats {
     private int totalUsers;
+    private int activeUsers;
     private int activeStocks;
     private int totalTrades;
     private BigDecimal totalTradedValue;
@@ -19,6 +20,14 @@ public class PlatformStats {
 
     public void setTotalUsers(int totalUsers) {
         this.totalUsers = totalUsers;
+    }
+
+    public int getActiveUsers() {
+        return activeUsers;
+    }
+
+    public void setActiveUsers(int activeUsers) {
+        this.activeUsers = activeUsers;
     }
 
     public int getActiveStocks() {
