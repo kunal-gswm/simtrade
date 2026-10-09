@@ -33,9 +33,12 @@ public class TradingService {
                 Trade trade = executor.execute(c, userId, stockId, qty);
                 c.commit();
                 return trade;
-            } catch (AppException | RuntimeException e) {
+            } catch (AppException e) {
                 rollbackQuietly(c);
                 throw e;
+            } catch (RuntimeException e) {
+                rollbackQuietly(c);
+                throw new DataAccessException("Trade failed due to unexpected error.", e);
             } catch (SQLException e) {
                 rollbackQuietly(c);
                 throw new DataAccessException("Trade failed; no changes were saved.", e);

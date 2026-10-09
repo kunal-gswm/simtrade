@@ -36,12 +36,12 @@ public class MarketServlet extends BaseServlet {
                 case "change":
                     stocks.sort((s1, s2) -> {
                         BigDecimal chg1 = BigDecimal.ZERO;
-                        if (s1.getPreviousPrice() != null && s1.getPreviousPrice().compareTo(BigDecimal.ZERO) > 0) {
-                            chg1 = s1.getPrice().subtract(s1.getPreviousPrice()).divide(s1.getPreviousPrice(), 4, RoundingMode.HALF_UP);
+                        if (s1.getPrevPrice() != null && s1.getPrevPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            chg1 = s1.getPrice().subtract(s1.getPrevPrice()).divide(s1.getPrevPrice(), 4, RoundingMode.HALF_UP);
                         }
                         BigDecimal chg2 = BigDecimal.ZERO;
-                        if (s2.getPreviousPrice() != null && s2.getPreviousPrice().compareTo(BigDecimal.ZERO) > 0) {
-                            chg2 = s2.getPrice().subtract(s2.getPreviousPrice()).divide(s2.getPreviousPrice(), 4, RoundingMode.HALF_UP);
+                        if (s2.getPrevPrice() != null && s2.getPrevPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            chg2 = s2.getPrice().subtract(s2.getPrevPrice()).divide(s2.getPrevPrice(), 4, RoundingMode.HALF_UP);
                         }
                         return chg2.compareTo(chg1);
                     });
