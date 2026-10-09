@@ -2,69 +2,133 @@ package com.project.trading.ui.views;
 
 import com.project.trading.model.AuthUser;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Nav;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.AfterNavigationEvent;
+import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.RouterLink;
 
-public class MainLayout extends AppLayout {
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainLayout extends AppLayout implements AfterNavigationObserver {
+
+    private final List<RouterLink> navLinks = new ArrayList<>();
+
+    // SVG Constants
+    private static final String SVG_BRAND = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z\" /></svg>";
+    private static final String SVG_MARKET = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941\" /></svg>";
+    private static final String SVG_PORTFOLIO = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3\" /></svg>";
+    private static final String SVG_HISTORY = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z\" /></svg>";
+    private static final String SVG_LOGOUT = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9\" /></svg>";
 
     public MainLayout() {
-        createHeader();
+        setPrimarySection(Section.DRAWER);
+        createNavbar();
         createDrawer();
     }
 
-    private void createHeader() {
-        H1 logo = new H1("SimTrade Pro");
-        logo.addClassNames("text-l", "m-m");
-        logo.getStyle().set("color", "var(--lumo-primary-text-color)");
-        logo.getStyle().set("font-weight", "bold");
-        logo.getStyle().set("letter-spacing", "1px");
+    private void createNavbar() {
+        DrawerToggle toggle = new DrawerToggle();
+        toggle.setAriaLabel("Toggle navigation");
+
+        Div navbarContent = new Div(toggle);
+        navbarContent.addClassName("st-navbar");
 
         SecurityService securityService = new SecurityService();
         AuthUser user = securityService.getAuthenticatedUser();
 
-        HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo);
-        header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
-        header.setWidth("100%");
-        header.addClassNames("py-0", "px-m");
-        header.getStyle().set("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
-        header.getStyle().set("background-color", "var(--lumo-base-color)");
-
         if (user != null) {
-            Span usernameBadge = new Span(user.getUsername().toUpperCase());
-            usernameBadge.getStyle()
-                .set("background-color", "var(--lumo-primary-color-10pct)")
-                .set("color", "var(--lumo-primary-color)")
-                .set("padding", "4px 8px")
-                .set("border-radius", "4px")
-                .set("font-weight", "600");
+            Div userSection = new Div();
+            userSection.addClassName("st-navbar-user");
+
+            String rawName = user.getUsername();
+            if (rawName == null || rawName.isEmpty()) rawName = "User";
+            String formattedUsername = rawName.substring(0, 1).toUpperCase() + rawName.substring(1).toLowerCase();
+
+            Div avatar = new Div();
+            avatar.setText(formattedUsername.substring(0, 1));
+            avatar.addClassName("st-avatar");
+
+            Span usernameSpan = new Span(formattedUsername);
+            usernameSpan.addClassName("st-navbar-username");
+
+            Div userProfile = new Div(avatar, usernameSpan);
+            userProfile.getStyle().set("display", "flex").set("align-items", "center").set("gap", "8px");
 
             Button logout = new Button("Log out", e -> securityService.logout());
-            logout.addThemeVariants(com.vaadin.flow.component.button.ButtonVariant.LUMO_TERTIARY);
-            
-            HorizontalLayout userInfo = new HorizontalLayout(usernameBadge, logout);
-            userInfo.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
-            userInfo.getStyle().set("margin-left", "auto");
-            header.add(userInfo);
+            logout.setIcon(createSvgIcon(SVG_LOGOUT));
+            logout.addClassName("st-navbar-logout");
+            logout.getElement().removeAttribute("theme");
+
+            userSection.add(userProfile, logout);
+            navbarContent.add(userSection);
         }
 
-        addToNavbar(header);
-        setPrimarySection(Section.DRAWER);
+        addToNavbar(navbarContent);
     }
 
     private void createDrawer() {
-        RouterLink marketLink = new RouterLink("Market", MarketView.class);
-        RouterLink portfolioLink = new RouterLink("Portfolio", PortfolioView.class);
-        RouterLink historyLink = new RouterLink("Trade History", HistoryView.class);
+        // Brand section
+        Div brand = new Div();
+        brand.addClassName("st-drawer-brand");
 
-        VerticalLayout list = new VerticalLayout(marketLink, portfolioLink, historyLink);
-        list.setPadding(true);
-        addToDrawer(list);
+        Component brandIcon = createSvgIcon(SVG_BRAND);
+        Span brandText = new Span("SimTrade");
+        brandText.addClassName("st-brand-text");
+        brand.add(brandIcon, brandText);
+
+        // Navigation links
+        Nav nav = new Nav();
+
+        RouterLink marketLink = createNavLink("Market", SVG_MARKET, MarketView.class);
+        RouterLink portfolioLink = createNavLink("Portfolio", SVG_PORTFOLIO, PortfolioView.class);
+        RouterLink historyLink = createNavLink("Trade History", SVG_HISTORY, HistoryView.class);
+
+        nav.add(marketLink, portfolioLink, historyLink);
+
+        addToDrawer(brand, nav);
+    }
+
+    private RouterLink createNavLink(String text, String svgData, Class<? extends Component> target) {
+        RouterLink link = new RouterLink();
+        link.setRoute(target);
+        link.addClassName("st-nav-link");
+
+        Component svgIcon = createSvgIcon(svgData);
+        Span label = new Span(text);
+
+        link.add(svgIcon, label);
+        navLinks.add(link);
+        return link;
+    }
+
+    private Component createSvgIcon(String svgData) {
+        Span span = new Span();
+        span.getElement().setProperty("innerHTML", svgData);
+        span.getStyle().set("display", "inline-flex").set("align-items", "center").set("justify-content", "center");
+        return span;
+    }
+
+    @Override
+    public void afterNavigation(AfterNavigationEvent event) {
+        String currentPath = event.getLocation().getPath();
+        for (RouterLink link : navLinks) {
+            String href = link.getHref();
+            boolean isActive = currentPath.equals(href)
+                    || (href.isEmpty() && (currentPath.isEmpty() || currentPath.equals("market")))
+                    || (href.equals("market") && currentPath.isEmpty());
+
+            if (isActive) {
+                link.addClassName("active");
+            } else {
+                link.removeClassName("active");
+            }
+        }
     }
 }
