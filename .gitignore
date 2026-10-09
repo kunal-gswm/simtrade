@@ -21,3 +21,8 @@ types.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+tomcat/
+tomcat.zip
+vite.generated.ts
+src/main/bundles/
