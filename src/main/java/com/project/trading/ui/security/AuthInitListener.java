@@ -19,7 +19,9 @@ public class AuthInitListener implements VaadinServiceInitListener {
         SecurityService securityService = new SecurityService();
         AuthUser user = securityService.getAuthenticatedUser();
 
-        if (!LoginView.class.equals(event.getNavigationTarget()) && user == null) {
+        if (!LoginView.class.equals(event.getNavigationTarget()) 
+            && !com.project.trading.ui.views.RegistrationView.class.equals(event.getNavigationTarget()) 
+            && user == null) {
             event.forwardTo(LoginView.class);
         } else if (LoginView.class.equals(event.getNavigationTarget()) && user != null) {
             event.forwardTo(""); // redirect authenticated users away from login
