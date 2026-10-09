@@ -1,68 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <title>SimTrade Dashboard Preview</title>
+  <desc>Illustrative paper-trading dashboard with simulated data</desc>
   <defs>
     <style>
       .bg { fill: #F8FAFC; }
       .panel { fill: #FFFFFF; rx: 12; stroke: #E2E8F0; stroke-width: 1; }
-      .text-h1 { font-family: 'Inter', system-ui, sans-serif; font-size: 24px; font-weight: bold; fill: #0F172A; }
-      .text-h2 { font-family: 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 600; fill: #475569; }
-      .text-val { font-family: 'Inter', system-ui, sans-serif; font-size: 32px; font-weight: bold; fill: #0F172A; }
-      .text-green { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; font-weight: 600; fill: #16A34A; }
-      .text-red { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; font-weight: 600; fill: #DC2626; }
       .chart-line { fill: none; stroke: #4F46E5; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-      .btn-buy { fill: #16A34A; rx: 6; }
-      .btn-sell { fill: #DC2626; rx: 6; }
     </style>
   </defs>
   
   <!-- Background -->
-  <rect width="800" height="500" class="bg" />
+  <rect width="800" height="500" class="bg"/>
   
   <!-- Sidebar -->
-  <rect x="0" y="0" width="200" height="500" fill="#0F172A" />
-  <circle cx="40" cy="50" r="16" fill="#4F46E5" />
-  <text x="70" y="56" class="text-h2" fill="#FFFFFF">SimTrade</text>
+  <rect x="0" y="0" width="200" height="500" fill="#0F172A"/>
+  <circle cx="40" cy="50" r="16" fill="#4F46E5"/>
+  <text x="68" y="56" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF">SimTrade</text>
   
-  <rect x="20" y="100" width="160" height="40" rx="6" fill="#1E293B" />
-  <text x="50" y="125" class="text-h2" fill="#E2E8F0">Dashboard</text>
+  <!-- Nav Items -->
+  <rect x="16" y="100" width="168" height="40" rx="8" fill="#1E293B"/>
+  <text x="40" y="126" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#E2E8F0">Dashboard</text>
   
-  <text x="50" y="180" class="text-h2" fill="#94A3B8">Market</text>
-  <text x="50" y="230" class="text-h2" fill="#94A3B8">Portfolio</text>
-  <text x="50" y="280" class="text-h2" fill="#94A3B8">History</text>
+  <text x="40" y="180" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#94A3B8">Market</text>
+  <text x="40" y="220" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#94A3B8">Portfolio</text>
+  <text x="40" y="260" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#94A3B8">History</text>
+  <text x="40" y="300" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#94A3B8">Profile</text>
   
   <!-- Main Content Area -->
-  <!-- Top Bar -->
-  <rect x="200" y="0" width="600" height="80" fill="#FFFFFF" />
-  <text x="240" y="50" class="text-h1">Overview</text>
+  <rect x="200" y="0" width="600" height="70" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="240" y="45" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#0F172A">Overview</text>
   
-  <!-- Value Cards -->
-  <!-- Portfolio Value -->
-  <rect x="240" y="110" width="250" height="120" class="panel" />
-  <text x="260" y="145" class="text-h2">Total Portfolio Value</text>
-  <text x="260" y="190" class="text-val">$124,530.00</text>
-  <text x="260" y="215" class="text-green">+ $2,450 (1.9%)</text>
+  <!-- Portfolio Value Card -->
+  <rect x="230" y="100" width="260" height="120" class="panel"/>
+  <text x="250" y="135" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#64748B">Total Portfolio Value</text>
+  <text x="250" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">$124,530.00</text>
+  <text x="250" y="200" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#16A34A">+ $2,450 (1.9%)</text>
   
-  <!-- Available Cash -->
-  <rect x="510" y="110" width="250" height="120" class="panel" />
-  <text x="530" y="145" class="text-h2">Available Cash</text>
-  <text x="530" y="190" class="text-val">$42,100.50</text>
+  <!-- Available Cash Card -->
+  <rect x="510" y="100" width="260" height="120" class="panel"/>
+  <text x="530" y="135" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#64748B">Available Cash</text>
+  <text x="530" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">$42,100.50</text>
   
   <!-- Chart Panel -->
-  <rect x="240" y="250" width="520" height="220" class="panel" />
-  <text x="260" y="285" class="text-h2">AAPL - Apple Inc.</text>
-  <text x="260" y="315" class="text-val" font-size="24">$175.40</text>
-  <text x="360" y="312" class="text-red">- $1.20 (0.68%)</text>
+  <rect x="230" y="245" width="540" height="230" class="panel"/>
   
-  <!-- Chart Grid & Line -->
-  <line x1="260" y1="360" x2="720" y2="360" stroke="#F1F5F9" stroke-width="2" />
-  <line x1="260" y1="400" x2="720" y2="400" stroke="#F1F5F9" stroke-width="2" />
-  <line x1="260" y1="440" x2="720" y2="440" stroke="#F1F5F9" stroke-width="2" />
+  <!-- Stock Info -->
+  <text x="255" y="280" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#475569">AAPL - Apple Inc.</text>
+  <text x="255" y="310" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="#0F172A">$175.40</text>
+  <text x="255" y="330" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DC2626">- $1.20 (0.68%)</text>
   
-  <path d="M 260 420 L 320 370 L 380 400 L 460 310 L 520 330 L 600 280 L 680 340 L 720 320" class="chart-line" />
+  <!-- Buy/Sell Buttons -->
+  <rect x="610" y="275" width="70" height="34" rx="6" fill="#16A34A"/>
+  <text x="645" y="297" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Buy</text>
   
-  <!-- Action Buttons -->
-  <rect x="580" y="270" width="70" height="36" class="btn-buy" />
-  <text x="615" y="293" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">Buy</text>
+  <rect x="690" y="275" width="70" height="34" rx="6" fill="#DC2626"/>
+  <text x="725" y="297" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Sell</text>
   
-  <rect x="660" y="270" width="70" height="36" class="btn-sell" />
-  <text x="695" y="293" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#FFF" text-anchor="middle">Sell</text>
+  <!-- Chart Grid -->
+  <line x1="255" y1="370" x2="740" y2="370" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="255" y1="400" x2="740" y2="400" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="255" y1="430" x2="740" y2="430" stroke="#F1F5F9" stroke-width="1"/>
+  
+  <!-- Chart Line -->
+  <path d="M 260 430 L 320 395 L 380 415 L 440 365 L 500 380 L 560 345 L 620 370 L 680 355 L 740 340" class="chart-line"/>
+  
+  <!-- Chart area fill -->
+  <path d="M 260 430 L 320 395 L 380 415 L 440 365 L 500 380 L 560 345 L 620 370 L 680 355 L 740 340 L 740 450 L 260 450 Z" fill="#4F46E5" opacity="0.06"/>
 </svg>
