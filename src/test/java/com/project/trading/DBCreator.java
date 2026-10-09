@@ -35,7 +35,11 @@ public class DBCreator {
         java.util.List<String> lines = Files.readAllLines(Paths.get(path));
         StringBuilder sb = new StringBuilder();
         for (String line : lines) {
-            if (!line.trim().startsWith("--")) {
+            String trimmed = line.trim();
+            if (!trimmed.startsWith("--") && 
+                !trimmed.toLowerCase().startsWith("use papertrade") &&
+                !trimmed.toLowerCase().startsWith("create database papertrade") &&
+                !trimmed.toLowerCase().startsWith("drop database if exists papertrade")) {
                 sb.append(line).append("\n");
             }
         }

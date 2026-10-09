@@ -27,7 +27,7 @@ Several issues were identified and fixed to ensure a fully functioning Day 2 bas
    - User references in `testBuy01` and `testTx01` were shifted to User 2 (Rahul) since User 3 (Priya) lacked the funds to complete the baseline test transactions.
 
 ## 5. Integration Checks
-- **Buy/Sell Atomicity:** Rollback logic works perfectly under simulated faults (`FaultInjector`). 
+- **Buy/Sell Atomicity:** Rollback logic works perfectly under simulated faults (`FaultInjector`). Internal `RuntimeException`s (like `IllegalStateException`) are correctly wrapped in a standard `DataAccessException`. We explicitly verified that when a transaction fails mid-trade, the user's cash balance remains un-deducted/un-credited, holdings remain untouched, and no partial trades are logged in the trade history table.
 - **Row-Locking / Concurrency:** `testCon01_ConcurrentBuy` correctly handles 10 concurrent requests for User 2. Exactly 2 succeed and 8 fail due to balance exhaustion. We explicitly verified thread safety by asserting that the user's final cash matches the expected deduction exactly, correct holding quantities were inserted, and exactly two trades were appended to the trade history table.
 - **Insufficient Constraints:** Prevented trades via `InvalidOrderException` and `InsufficientBalanceException`.
 

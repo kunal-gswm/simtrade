@@ -77,20 +77,41 @@ public class TradingServiceTest {
     // Transactions and Concurrency
     @Test
     
-    public void testTx01_InjectedFailureOnBuyRollsBack() {
+    public void testTx01_InjectedFailureOnBuyRollsBack() throws Exception {
         FaultInjector.failMidTrade = true;
         assertThrows(DataAccessException.class, () -> {
             tradingService.buy(2, 11, 10); // WIPRO
         });
+        
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+            java.math.BigDecimal cash = userDAO.findById(c, 2).getCashBalance();
+            assertEquals(0, new java.math.BigDecimal("100000.00").compareTo(cash), "Cash should not be deducted");
+            
+            java.util.List<com.project.trading.model.Trade> trades = tradingService.getHistory(2, 100);
+            long stock11Trades = trades.stream().filter(t -> t.getStockId() == 11).count();
+            assertEquals(0, stock11Trades, "No trade should be recorded");
+        }
     }
 
     @Test
     
-    public void testTx02_InjectedFailureOnSellRollsBack() {
+    public void testTx02_InjectedFailureOnSellRollsBack() throws Exception {
         FaultInjector.failMidTrade = true;
         assertThrows(DataAccessException.class, () -> {
             tradingService.sell(3, 3, 10);
         });
+        
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+            com.project.trading.dao.HoldingDAO holdingDAO = new com.project.trading.dao.HoldingDAO();
+            
+            java.math.BigDecimal cash = userDAO.findById(c, 3).getCashBalance();
+            assertEquals(0, new java.math.BigDecimal("21600.00").compareTo(cash), "Cash should not increase");
+            
+            com.project.trading.model.Holding holding = holdingDAO.find(c, 3, 3);
+            assertEquals(20, holding.getQuantity(), "Holding quantity should not decrease");
+        }
     }
 
     @Test
@@ -128,7 +149,7 @@ public class TradingServiceTest {
             assertEquals(0, new java.math.BigDecimal("14500.00").compareTo(cash), "Final cash should be exactly 14500.00");
             
             // Check final holdings (2 * 15 = 30 shares of stock 1)
-            com.project.trading.model.Holding holding = holdingDAO.findByUserAndStock(c, 2, 1);
+            com.project.trading.model.Holding holding = holdingDAO.find(c, 2, 1);
             assertNotNull(holding, "Holding should exist");
             assertEquals(30, holding.getQuantity(), "Holding quantity should be 30");
             
