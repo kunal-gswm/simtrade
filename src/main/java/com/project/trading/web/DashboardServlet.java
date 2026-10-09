@@ -101,7 +101,7 @@ public class DashboardServlet extends HttpServlet {
         for (Holding h : portfolio.getHoldings()) {
             Stock s = stockCatalog.get(h.getStockSymbol());
             if (s != null) {
-                h.setCurrentPrice(s.getPrice());
+                h.setCurrentPrice(s.getPriceAsDouble());
             }
         }
 
@@ -120,11 +120,11 @@ public class DashboardServlet extends HttpServlet {
         
         // Sort for Top Gainers
         List<Stock> topGainers = new ArrayList<>(allStocks);
-        topGainers.sort(Comparator.comparingDouble(Stock::getChangePercent).reversed());
+        topGainers.sort(Comparator.comparingDouble(Stock::getChangePercentAsDouble).reversed());
 
         // Sort for Top Losers
         List<Stock> topLosers = new ArrayList<>(allStocks);
-        topLosers.sort(Comparator.comparingDouble(Stock::getChangePercent));
+        topLosers.sort(Comparator.comparingDouble(Stock::getChangePercentAsDouble));
 
         // Sort for Most Active by Volume
         List<Stock> mostActive = new ArrayList<>(allStocks);
@@ -187,7 +187,7 @@ public class DashboardServlet extends HttpServlet {
                 throw new IllegalArgumentException("Quantity must be a positive integer.");
             }
 
-            double executionPrice = stock.getPrice();
+            double executionPrice = stock.getPriceAsDouble();
             if ("LIMIT".equalsIgnoreCase(orderType) && priceStr != null && !priceStr.trim().isEmpty()) {
                 executionPrice = Double.parseDouble(priceStr);
                 if (executionPrice <= 0) {
