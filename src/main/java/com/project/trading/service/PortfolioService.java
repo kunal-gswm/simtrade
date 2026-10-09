@@ -19,6 +19,32 @@ import java.util.List;
  */
 public class PortfolioService {
 
+    private final com.project.trading.dao.HoldingDAO holdingDAO = new com.project.trading.dao.HoldingDAO();
+    private final com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+
+    /**
+     * Loads the real database-backed portfolio for the given user ID.
+     */
+    public Portfolio getPortfolioForUser(long userId) {
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.model.User user = userDAO.findById(c, userId);
+            if (user == null) {
+                return new Portfolio((int) userId, java.util.Collections.emptyList());
+            }
+            List<Holding> holdings = holdingDAO.findByUserWithStock(c, userId);
+            
+            // Map Holding objects to have correct values for Portfolio summary
+            for (Holding h : holdings) {
+                h.setCurrentPrice(h.getStock().getPriceAsDouble());
+                h.setStockName(h.getStock().getCompanyName());
+            }
+            
+            return new Portfolio((int) userId, user.getCashBalance().doubleValue(), holdings);
+        } catch (java.sql.SQLException e) {
+            throw new com.project.trading.exception.DataAccessException("Failed to load portfolio from database.", e);
+        }
+    }
+
     /**
      * Builds a fully computed PortfolioSummary from the session-held Portfolio object.
      *
@@ -40,6 +66,7 @@ public class PortfolioService {
             double unrealizedPct = PnLCalculator.calculateUnrealizedPct(unrealizedPnl, invested);
 
             rows.add(new HoldingRow(
+                    h.getStockId(),
                     h.getStockSymbol(),
                     h.getStockName(),
                     h.getQuantity(),
@@ -75,6 +102,7 @@ public class PortfolioService {
 
     /** One row in the holdings table on portfolio.jsp */
     public static class HoldingRow {
+        public final long   stockId;
         public final String symbol;
         public final String companyName;
         public final int    quantity;
@@ -85,10 +113,11 @@ public class PortfolioService {
         public final double unrealizedPnl;
         public final double unrealizedPct;
 
-        public HoldingRow(String symbol, String companyName, int quantity,
+        public HoldingRow(long stockId, String symbol, String companyName, int quantity,
                           double avgBuyPrice, double currentPrice,
                           double invested, double currentValue,
                           double unrealizedPnl, double unrealizedPct) {
+            this.stockId       = stockId;
             this.symbol        = symbol;
             this.companyName   = companyName;
             this.quantity      = quantity;

@@ -23,7 +23,8 @@ public class TradingServiceTest {
     private TradingService tradingService;
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
+        com.project.trading.DBCreator.main(null);
         tradingService = new TradingService();
         FaultInjector.failMidTrade = false;
     }
@@ -35,17 +36,19 @@ public class TradingServiceTest {
 
     // BUY Tests
     @Test
-    @Disabled("Pending Dev 2 and 3 real DAOs (UserDAO/StockDAO)")
+    
     public void testBuy01_ValidBuy() {
         assertDoesNotThrow(() -> {
-            tradingService.buy(3, 2, 10);
+            tradingService.buy(2, 11, 10); // WIPRO (cost 4800), leaves enough balance
         });
     }
 
     @Test
-    @Disabled("Pending Dev 2 and 3 real DAOs")
+    
     public void testBuy03_InsufficientBalance() {
-        // Assert InsufficientBalanceException in real test
+        assertThrows(com.project.trading.exception.InsufficientBalanceException.class, () -> {
+            tradingService.buy(2, 2, 1000); // User 2 has 14500, 1000 shares of 3900 is 3.9 million
+        });
     }
 
     @Test
@@ -57,7 +60,7 @@ public class TradingServiceTest {
 
     // SELL Tests
     @Test
-    @Disabled("Pending Dev 2 and 3 real DAOs")
+    
     public void testSell01_ValidPartialSell() {
         assertDoesNotThrow(() -> {
             tradingService.sell(3, 2, 5);
@@ -73,25 +76,46 @@ public class TradingServiceTest {
 
     // Transactions and Concurrency
     @Test
-    @Disabled("Pending MySQL connection and populated DAOs")
-    public void testTx01_InjectedFailureOnBuyRollsBack() {
+    
+    public void testTx01_InjectedFailureOnBuyRollsBack() throws Exception {
         FaultInjector.failMidTrade = true;
         assertThrows(DataAccessException.class, () -> {
-            tradingService.buy(2, 2, 10);
+            tradingService.buy(2, 11, 10); // WIPRO
         });
+        
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+            java.math.BigDecimal cash = userDAO.findById(c, 2).getCashBalance();
+            assertEquals(0, new java.math.BigDecimal("100000.00").compareTo(cash), "Cash should not be deducted");
+            
+            java.util.List<com.project.trading.model.Trade> trades = tradingService.getHistory(2, 100);
+            long stock11Trades = trades.stream().filter(t -> t.getStockId() == 11).count();
+            assertEquals(0, stock11Trades, "No trade should be recorded");
+        }
     }
 
     @Test
-    @Disabled("Pending MySQL connection and populated DAOs")
-    public void testTx02_InjectedFailureOnSellRollsBack() {
+    
+    public void testTx02_InjectedFailureOnSellRollsBack() throws Exception {
         FaultInjector.failMidTrade = true;
         assertThrows(DataAccessException.class, () -> {
             tradingService.sell(3, 3, 10);
         });
+        
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+            com.project.trading.dao.HoldingDAO holdingDAO = new com.project.trading.dao.HoldingDAO();
+            
+            java.math.BigDecimal cash = userDAO.findById(c, 3).getCashBalance();
+            assertEquals(0, new java.math.BigDecimal("21600.00").compareTo(cash), "Cash should not increase");
+            
+            com.project.trading.model.Holding holding = holdingDAO.find(c, 3, 3);
+            assertEquals(20, holding.getQuantity(), "Holding quantity should not decrease");
+        }
     }
 
     @Test
-    @Disabled("Pending MySQL connection and populated DAOs")
+    
     public void testCon01_ConcurrentBuy() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         List<Callable<Trade>> tasks = new ArrayList<>();
@@ -108,12 +132,33 @@ public class TradingServiceTest {
                 f.get();
                 successCount++;
             } catch (Exception e) {
+                e.printStackTrace();
                 failCount++;
             }
         }
         
-        assertEquals(2, successCount);
-        assertEquals(8, failCount);
+        assertEquals(2, successCount, "Exactly 2 out of 10 buys should succeed");
+        assertEquals(8, failCount, "Exactly 8 out of 10 buys should fail due to insufficient funds");
+        
+        try (java.sql.Connection c = com.project.trading.util.DBConnection.getConnection()) {
+            com.project.trading.dao.UserDAO userDAO = new com.project.trading.dao.UserDAO();
+            com.project.trading.dao.HoldingDAO holdingDAO = new com.project.trading.dao.HoldingDAO();
+            
+            // Check final cash
+            java.math.BigDecimal cash = userDAO.findById(c, 2).getCashBalance();
+            assertEquals(0, new java.math.BigDecimal("14500.00").compareTo(cash), "Final cash should be exactly 14500.00");
+            
+            // Check final holdings (2 * 15 = 30 shares of stock 1)
+            com.project.trading.model.Holding holding = holdingDAO.find(c, 2, 1);
+            assertNotNull(holding, "Holding should exist");
+            assertEquals(30, holding.getQuantity(), "Holding quantity should be 30");
+            
+            // Check trade history
+            java.util.List<com.project.trading.model.Trade> trades = tradingService.getHistory(2, 100);
+            long stock1Trades = trades.stream().filter(t -> t.getStockId() == 1).count();
+            assertEquals(2, stock1Trades, "Exactly 2 trades for stock 1 should exist in history");
+        }
+        
         executor.shutdown();
     }
 }

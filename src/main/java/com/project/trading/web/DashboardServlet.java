@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Controller Servlet for Sim Trade Dashboard.
  * Serves the NSE India-inspired trading dashboard and processes simulated trade orders.
  */
-@WebServlet(name = "DashboardServlet", urlPatterns = {"/dashboard", "/trade", ""})
+@WebServlet(name = "DashboardServlet", urlPatterns = {"/dashboard", "/trade"})
 public class DashboardServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
