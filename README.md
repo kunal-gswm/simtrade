@@ -16,7 +16,7 @@
 
 ---
 
-SimTrade is an educational paper-trading platform that simulates stock market operations in a risk-free environment. Users start with a virtual cash balance of $100,000, browse a live simulated market, execute buy and sell orders, and track portfolio performance over time. The platform is built as a Java WAR application with a dual-interface architecture: a modern **Vaadin Flow** reactive UI and a legacy **Servlet/JSP** interface, both backed by a shared service and data-access layer connected to MySQL.
+SimTrade is an educational paper-trading platform that simulates stock market operations in a risk-free environment. Users start with a virtual cash balance of ₹1,00,000, browse a live simulated market, execute buy and sell orders, and track portfolio performance over time. The platform is built as a Java WAR application with a dual-interface architecture: a modern **Vaadin Flow** reactive UI and a legacy **Servlet/JSP** interface, both backed by a shared service and data-access layer connected to MySQL.
 
 <p align="center">
   <img src="docs/assets/simtrade-dashboard.svg" alt="SimTrade Dashboard Preview" width="700" />

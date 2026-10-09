@@ -33,21 +33,21 @@
   <!-- Portfolio Value Card -->
   <rect x="230" y="100" width="260" height="120" class="panel"/>
   <text x="250" y="135" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#64748B">Total Portfolio Value</text>
-  <text x="250" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">$124,530.00</text>
-  <text x="250" y="200" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#16A34A">+ $2,450 (1.9%)</text>
+  <text x="250" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">₹1,24,530.00</text>
+  <text x="250" y="200" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#16A34A">+ ₹2,450 (1.9%)</text>
   
   <!-- Available Cash Card -->
   <rect x="510" y="100" width="260" height="120" class="panel"/>
   <text x="530" y="135" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#64748B">Available Cash</text>
-  <text x="530" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">$42,100.50</text>
+  <text x="530" y="175" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#0F172A">₹42,100.50</text>
   
   <!-- Chart Panel -->
   <rect x="230" y="245" width="540" height="230" class="panel"/>
   
   <!-- Stock Info -->
-  <text x="255" y="280" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#475569">AAPL - Apple Inc.</text>
-  <text x="255" y="310" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="#0F172A">$175.40</text>
-  <text x="255" y="330" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DC2626">- $1.20 (0.68%)</text>
+  <text x="255" y="280" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#475569">RELIANCE - Reliance Industries</text>
+  <text x="255" y="310" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="#0F172A">₹2,950.40</text>
+  <text x="255" y="330" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#DC2626">- ₹12.20 (0.41%)</text>
   
   <!-- Buy/Sell Buttons -->
   <rect x="610" y="275" width="70" height="34" rx="6" fill="#16A34A"/>
