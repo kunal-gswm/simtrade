@@ -20,8 +20,11 @@ public class MainLayout extends AppLayout {
     }
 
     private void createHeader() {
-        H1 logo = new H1("SimTrade");
+        H1 logo = new H1("SimTrade Pro");
         logo.addClassNames("text-l", "m-m");
+        logo.getStyle().set("color", "var(--lumo-primary-text-color)");
+        logo.getStyle().set("font-weight", "bold");
+        logo.getStyle().set("letter-spacing", "1px");
 
         SecurityService securityService = new SecurityService();
         AuthUser user = securityService.getAuthenticatedUser();
@@ -30,16 +33,29 @@ public class MainLayout extends AppLayout {
         header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
         header.setWidth("100%");
         header.addClassNames("py-0", "px-m");
+        header.getStyle().set("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+        header.getStyle().set("background-color", "var(--lumo-base-color)");
 
         if (user != null) {
+            Span usernameBadge = new Span(user.getUsername().toUpperCase());
+            usernameBadge.getStyle()
+                .set("background-color", "var(--lumo-primary-color-10pct)")
+                .set("color", "var(--lumo-primary-color)")
+                .set("padding", "4px 8px")
+                .set("border-radius", "4px")
+                .set("font-weight", "600");
+
             Button logout = new Button("Log out", e -> securityService.logout());
-            HorizontalLayout userInfo = new HorizontalLayout(new Span(user.getUsername()), logout);
+            logout.addThemeVariants(com.vaadin.flow.component.button.ButtonVariant.LUMO_TERTIARY);
+            
+            HorizontalLayout userInfo = new HorizontalLayout(usernameBadge, logout);
             userInfo.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
             userInfo.getStyle().set("margin-left", "auto");
             header.add(userInfo);
         }
 
         addToNavbar(header);
+        setPrimarySection(Section.DRAWER);
     }
 
     private void createDrawer() {

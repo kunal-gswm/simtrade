@@ -82,6 +82,9 @@ public class MarketView extends VerticalLayout {
         add(searchField, errorMessage, grid);
 
         updateList();
+
+        com.vaadin.flow.component.UI.getCurrent().setPollInterval(2000);
+        com.vaadin.flow.component.UI.getCurrent().addPollListener(e -> updateList());
     }
 
     private void updateList() {

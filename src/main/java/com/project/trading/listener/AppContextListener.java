@@ -13,6 +13,7 @@ public class AppContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         PriceSimulator simulator = new PriceSimulator();
+        simulator.start(2);
         sce.getServletContext().setAttribute(SIMULATOR_ATTR, simulator);
     }
 
