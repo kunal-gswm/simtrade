@@ -66,6 +66,7 @@ public class PortfolioService {
             double unrealizedPct = PnLCalculator.calculateUnrealizedPct(unrealizedPnl, invested);
 
             rows.add(new HoldingRow(
+                    h.getStockId(),
                     h.getStockSymbol(),
                     h.getStockName(),
                     h.getQuantity(),
@@ -101,6 +102,7 @@ public class PortfolioService {
 
     /** One row in the holdings table on portfolio.jsp */
     public static class HoldingRow {
+        public final long   stockId;
         public final String symbol;
         public final String companyName;
         public final int    quantity;
@@ -111,10 +113,11 @@ public class PortfolioService {
         public final double unrealizedPnl;
         public final double unrealizedPct;
 
-        public HoldingRow(String symbol, String companyName, int quantity,
+        public HoldingRow(long stockId, String symbol, String companyName, int quantity,
                           double avgBuyPrice, double currentPrice,
                           double invested, double currentValue,
                           double unrealizedPnl, double unrealizedPct) {
+            this.stockId       = stockId;
             this.symbol        = symbol;
             this.companyName   = companyName;
             this.quantity      = quantity;

@@ -1,15 +1,25 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
 import com.project.trading.model.AuthUser;
 import com.project.trading.model.Portfolio;
+import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
+import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
@@ -21,6 +31,7 @@ import java.util.Locale;
 public class PortfolioView extends VerticalLayout {
 
     private final PortfolioService portfolioService;
+    private final TradingService tradingService;
     private final SecurityService securityService;
     private final Grid<PortfolioService.HoldingRow> grid;
     private final Span errorMessage;
@@ -34,6 +45,7 @@ public class PortfolioView extends VerticalLayout {
 
     public PortfolioView() {
         this.portfolioService = new PortfolioService();
+        this.tradingService = new TradingService();
         this.securityService = new SecurityService();
         this.currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
         this.percentFormat = NumberFormat.getPercentInstance(Locale.US);
@@ -63,6 +75,13 @@ public class PortfolioView extends VerticalLayout {
             }
             return pnlSpan;
         }).setHeader("Unrealized P&L").setSortable(true);
+
+        grid.addComponentColumn(row -> {
+            Button sellBtn = new Button("Sell");
+            sellBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+            sellBtn.addClickListener(e -> openSellDialog(row));
+            return sellBtn;
+        }).setHeader("Actions");
 
         add(errorMessage, createSummaryHeader(), grid);
         updateData();
@@ -115,5 +134,75 @@ public class PortfolioView extends VerticalLayout {
             errorMessage.setVisible(true);
             grid.setItems();
         }
+    }
+
+    private void openSellDialog(PortfolioService.HoldingRow row) {
+        AuthUser user = securityService.getAuthenticatedUser();
+        if (user == null) {
+            Notification.show("Please log in to trade.");
+            return;
+        }
+
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Sell " + row.symbol);
+
+        VerticalLayout dialogLayout = new VerticalLayout();
+        dialogLayout.setPadding(false);
+        dialogLayout.setSpacing(false);
+        dialogLayout.setAlignItems(FlexComponent.Alignment.STRETCH);
+        dialogLayout.getStyle().set("width", "18rem").set("max-width", "100%");
+
+        Span quantityInfo = new Span("Available shares: " + row.quantity);
+        quantityInfo.getStyle().set("font-size", "var(--lumo-font-size-s)");
+
+        Span priceInfo = new Span("Current server price: " + currencyFormat.format(row.currentPrice));
+        priceInfo.getStyle().set("font-size", "var(--lumo-font-size-s)").set("color", "var(--lumo-secondary-text-color)");
+
+        Span disclaimer = new Span("Note: Final execution price is determined by the server.");
+        disclaimer.getStyle().set("font-size", "var(--lumo-font-size-xs)").set("color", "var(--lumo-secondary-text-color)");
+
+        IntegerField qtyField = new IntegerField("Quantity to Sell");
+        qtyField.setMin(1);
+        qtyField.setMax(row.quantity);
+        qtyField.setStepButtonsVisible(true);
+        qtyField.setValue(1);
+        qtyField.setRequiredIndicatorVisible(true);
+
+        dialogLayout.add(quantityInfo, priceInfo, qtyField, disclaimer);
+        dialog.add(dialogLayout);
+
+        Button cancelBtn = new Button("Cancel", e -> dialog.close());
+        Button confirmBtn = new Button("Confirm Sell");
+        confirmBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+
+        confirmBtn.addClickListener(e -> {
+            Integer qty = qtyField.getValue();
+            if (qty == null || qty < 1 || qty > row.quantity) {
+                Notification.show("Please enter a valid quantity between 1 and " + row.quantity + ".", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+
+            confirmBtn.setEnabled(false); // Prevent double submission
+
+            try {
+                Trade trade = tradingService.sell(user.getId(), row.stockId, qty);
+                Notification.show("Successfully sold " + trade.getQuantity() + " shares of " + trade.getStockSymbol() + " for " + currencyFormat.format(trade.getTotalAmount()), 5000, Notification.Position.BOTTOM_CENTER)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close();
+                updateData(); // Refresh portfolio and cash balances
+            } catch (AppException ex) {
+                Notification.show("Trade failed: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            } catch (Exception ex) {
+                Notification.show("An unexpected error occurred during execution.", 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            } finally {
+                confirmBtn.setEnabled(true);
+            }
+        });
+
+        dialog.getFooter().add(cancelBtn, confirmBtn);
+        dialog.open();
     }
 }
