@@ -3,7 +3,16 @@ target/
 
 # Local database configuration
 src/main/resources/db.properties
+src/test/resources/db.properties
 
+# Vaadin
+node_modules/
+frontend/generated/
+package.json
+package-lock.json
+vite.config.ts
+tsconfig.json
+types.d.ts
 # IDE
 .idea/
 *.iml
