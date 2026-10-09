@@ -19,7 +19,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
-@Route(value = "profile", layout = MainLayout.class)
+@Route(value = "ui/profile", layout = MainLayout.class)
 @PageTitle("Profile | SimTrade")
 public class ProfileView extends Div {
 
@@ -31,7 +31,7 @@ public class ProfileView extends Div {
         this.userService = new UserService();
         this.securityService = new SecurityService();
         
-        addClassName("st-view");
+        addClassName("st-page");
         
         AuthUser authUser = securityService.getAuthenticatedUser();
         if (authUser == null) {
@@ -45,11 +45,12 @@ public class ProfileView extends Div {
         }
 
         Div content = new Div();
-        content.addClassName("st-card");
-        content.getStyle().set("max-width", "600px").set("margin", "0 auto");
+        content.addClassName("st-table-surface");
+        content.getStyle().set("max-width", "600px").set("margin", "0 auto").set("padding", "32px");
 
         H2 title = new H2("Account Profile");
-        title.getStyle().set("margin-top", "0").set("font-size", "24px").set("color", "var(--st-navy)");
+        title.addClassName("st-page-title");
+        title.getStyle().set("margin-bottom", "24px");
 
         FormLayout profileForm = new FormLayout();
         
@@ -75,6 +76,7 @@ public class ProfileView extends Div {
 
         Button updateProfileButton = new Button("Update Profile");
         updateProfileButton.addClassNames("st-btn", "st-btn-primary");
+        updateProfileButton.getStyle().set("margin-top", "16px");
         updateProfileButton.addClickListener(e -> {
             profileMsg.getStyle().set("display", "none");
             try {
@@ -91,7 +93,8 @@ public class ProfileView extends Div {
         });
 
         H2 pwdTitle = new H2("Change Password");
-        pwdTitle.getStyle().set("margin-top", "32px").set("font-size", "20px").set("color", "var(--st-navy)");
+        pwdTitle.addClassName("st-section-title");
+        pwdTitle.getStyle().set("margin-top", "40px").set("margin-bottom", "16px");
 
         FormLayout pwdForm = new FormLayout();
         
@@ -106,8 +109,8 @@ public class ProfileView extends Div {
         pwdMsg.getStyle().set("font-size", "14px").set("display", "none").set("margin-top", "8px");
 
         Button changePwdButton = new Button("Change Password");
-        changePwdButton.addClassNames("st-btn"); 
-        changePwdButton.getStyle().set("border", "1px solid var(--st-gray-300)").set("background", "white");
+        changePwdButton.addClassNames("st-btn", "st-btn-secondary"); 
+        changePwdButton.getStyle().set("margin-top", "16px");
         changePwdButton.addClickListener(e -> {
             pwdMsg.getStyle().set("display", "none");
             

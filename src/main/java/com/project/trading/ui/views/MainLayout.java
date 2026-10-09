@@ -54,8 +54,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             String formattedUsername = rawName.substring(0, 1).toUpperCase() + rawName.substring(1).toLowerCase();
 
             Div avatar = new Div();
-            avatar.setText(formattedUsername.substring(0, 1));
             avatar.addClassName("st-avatar");
+            Component userIcon = createSvgIcon("<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"none\"><path d=\"M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\"/></svg>");
+            userIcon.getElement().getStyle().set("width", "16px").set("height", "16px");
+            avatar.add(userIcon);
 
             Span usernameSpan = new Span(formattedUsername);
             usernameSpan.addClassName("st-navbar-username");

@@ -30,7 +30,7 @@ import com.vaadin.flow.router.RouterLink;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-@Route(value = "portfolio", layout = MainLayout.class)
+@Route(value = "ui/portfolio", layout = MainLayout.class)
 @PageTitle("Portfolio | SimTrade")
 public class PortfolioView extends Div {
 

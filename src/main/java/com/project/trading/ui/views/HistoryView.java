@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-@Route(value = "history", layout = MainLayout.class)
+@Route(value = "ui/history", layout = MainLayout.class)
 @PageTitle("Trade History | SimTrade")
 public class HistoryView extends Div {
 

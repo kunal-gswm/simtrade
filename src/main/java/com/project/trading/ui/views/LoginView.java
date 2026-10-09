@@ -90,7 +90,7 @@ public class LoginView extends Div {
             SecurityService securityService = new SecurityService();
             try {
                 securityService.authenticate(username.getValue(), password.getValue());
-                UI.getCurrent().navigate("");
+                UI.getCurrent().navigate("ui/dashboard");
             } catch (AuthenticationException ex) {
                 errorMsg.getStyle().set("display", "block");
                 loginButton.setEnabled(true);
