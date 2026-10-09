@@ -58,6 +58,7 @@ public class BuyOrderExecutor extends AbstractOrderExecutor {
         trade.setPrice(stock.getPrice());
         trade.setTotalAmount(total);
         trade.setRealizedPnl(BigDecimal.ZERO);
+        trade.setStockSymbol(stock.getSymbol());
         
         return recordTrade(c, trade);
     }

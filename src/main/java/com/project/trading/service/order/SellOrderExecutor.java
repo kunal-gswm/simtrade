@@ -50,6 +50,7 @@ public class SellOrderExecutor extends AbstractOrderExecutor {
         trade.setPrice(stock.getPrice());
         trade.setTotalAmount(total);
         trade.setRealizedPnl(realized);
+        trade.setStockSymbol(stock.getSymbol());
 
         return recordTrade(c, trade);
     }
