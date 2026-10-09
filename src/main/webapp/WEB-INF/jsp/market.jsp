@@ -74,11 +74,11 @@
             <table class="market-table">
                 <thead>
                     <tr>
-                        <th>Symbol</th>
+                        <th><a href="?q=<c:out value='${q}'/>&sort=symbol" style="text-decoration:none; color:inherit;">Symbol ↕</a></th>
                         <th>Company Name</th>
                         <th>Sector</th>
-                        <th>Price</th>
-                        <th>Day Change</th>
+                        <th><a href="?q=<c:out value='${q}'/>&sort=price" style="text-decoration:none; color:inherit;">Price ↕</a></th>
+                        <th><a href="?q=<c:out value='${q}'/>&sort=change" style="text-decoration:none; color:inherit;">Day Change ↕</a></th>
                         <th>Action</th>
                     </tr>
                 </thead>
