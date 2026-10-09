@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" rx="20" fill="#F8FAFC" />
+  <!-- Buy Arrow (Up/Green) -->
+  <path d="M 35 70 L 35 45 L 20 45 L 42.5 20 L 65 45 L 50 45 L 50 70 Z" fill="#16A34A" />
+  <!-- Sell Arrow (Down/Red) -->
+  <path d="M 65 30 L 65 55 L 80 55 L 57.5 80 L 35 55 L 50 55 L 50 30 Z" fill="#DC2626" />
+</svg>
