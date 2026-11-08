@@ -82,6 +82,7 @@
                 </c:choose>
             </div>
             <form action="${pageContext.request.contextPath}/admin/prices" method="post">
+                <input type="hidden" name="csrfToken" value="${csrfToken}">
                 <input type="hidden" name="action" value="simulator">
                 <c:choose>
                     <c:when test="${simulatorRunning}">
@@ -114,6 +115,7 @@
                 </c:choose>
             </div>
             <form action="${pageContext.request.contextPath}/admin/prices" method="post">
+                <input type="hidden" name="csrfToken" value="${csrfToken}">
                 <input type="hidden" name="action" value="fault">
                 <c:choose>
                     <c:when test="${faultOn}">
@@ -154,6 +156,7 @@
                         <td>₹<fmt:formatNumber value="${stock.price}" type="number" minFractionDigits="2" maxFractionDigits="2" groupingUsed="true"/></td>
                         <td colspan="2">
                             <form action="${pageContext.request.contextPath}/admin/prices" method="post" style="display: flex; gap: 10px; align-items: center; margin: 0;">
+                                <input type="hidden" name="csrfToken" value="${csrfToken}">
                                 <input type="hidden" name="action" value="price">
                                 <input type="hidden" name="id" value="${stock.id}">
                                 <input type="number" name="price" class="price-input" step="0.01" min="0.01" max="9999999.99" value="<fmt:formatNumber value='${stock.price}' type='number' minFractionDigits='2' maxFractionDigits='2' groupingUsed='false'/>" required>

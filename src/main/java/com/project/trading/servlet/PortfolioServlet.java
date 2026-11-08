@@ -1,23 +1,22 @@
 package com.project.trading.servlet;
 
-import com.project.trading.model.Portfolio;
+import com.project.trading.model.AuthUser;
 import com.project.trading.service.PortfolioService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 
 /**
  * Serves the portfolio page (T39).
+ * Loads real database-backed portfolio and holding metrics.
  * URL: /app/portfolio
  */
 @WebServlet("/app/portfolio")
-public class PortfolioServlet extends HttpServlet {
+public class PortfolioServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 
     private final PortfolioService portfolioService = new PortfolioService();
@@ -26,16 +25,15 @@ public class PortfolioServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("userPortfolio") == null) {
-            resp.sendRedirect(req.getContextPath() + "/dashboard");
+        AuthUser user = currentUser(req);
+        if (user == null) {
+            redirect(req, resp, "/login");
             return;
         }
 
-        Portfolio portfolio = (Portfolio) session.getAttribute("userPortfolio");
-        PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(portfolio);
+        PortfolioService.PortfolioSummary summary = portfolioService.getSummaryForUser(user.getId());
 
         req.setAttribute("summary", summary);
-        req.getRequestDispatcher("/WEB-INF/jsp/portfolio.jsp").forward(req, resp);
+        forward(req, resp, "portfolio.jsp");
     }
 }

@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
-@WebFilter(filterName = "AuthFilter", urlPatterns = {"/app/*", "/admin/*"})
+@WebFilter(filterName = "AuthFilter", urlPatterns = {"/app/*", "/admin/*", "/dashboard", "/trade"})
 public class AuthFilter implements Filter {
 
     @Override
@@ -47,7 +47,7 @@ public class AuthFilter implements Filter {
         }
 
         // 3. Trader realm access for admins
-        if (servletPath != null && servletPath.startsWith("/app")) {
+        if (servletPath != null && (servletPath.startsWith("/app") || servletPath.equals("/dashboard") || servletPath.equals("/trade"))) {
             if (authUser.getRole() == Role.ADMIN) {
                 resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
                 return;

@@ -120,6 +120,7 @@
                 </c:when>
                 <c:otherwise>
                     <form action="${pageContext.request.contextPath}/app/buy" method="post">
+                        <input type="hidden" name="csrfToken" value="${csrfToken}">
                         <input type="hidden" name="stockId" value="${stock.id}">
                         <div class="form-group">
                             <label for="buyQty">Quantity (1 - 10,000):</label>
@@ -140,6 +141,7 @@
                 </c:when>
                 <c:otherwise>
                     <form action="${pageContext.request.contextPath}/app/sell" method="post">
+                        <input type="hidden" name="csrfToken" value="${csrfToken}">
                         <input type="hidden" name="stockId" value="${stock.id}">
                         <div class="form-group">
                             <label for="sellQty">Quantity (Max: <c:out value="${heldQty}"/>):</label>

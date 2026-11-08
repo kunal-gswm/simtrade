@@ -72,6 +72,7 @@
                                         </c:when>
                                         <c:otherwise>
                                             <form action="${pageContext.request.contextPath}/admin/users" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrfToken" value="${csrfToken}">
                                                 <input type="hidden" name="userId" value="${u.id}">
                                                 <c:choose>
                                                     <c:when test="${u.status == 'ACTIVE'}">

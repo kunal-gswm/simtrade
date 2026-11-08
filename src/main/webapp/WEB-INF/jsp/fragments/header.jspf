@@ -47,6 +47,7 @@
                     👤 <c:out value="${sessionScope.AuthUser.username}"/>
                 </a>
                 <form action="${pageContext.request.contextPath}/logout" method="post" style="display:inline; margin-left: 8px;">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                     <button type="submit" class="tv-trade-btn" style="background: var(--tv-border); color: var(--tv-text-primary);">Logout</button>
                 </form>
             </c:if>
