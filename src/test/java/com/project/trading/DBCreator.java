@@ -1,19 +1,35 @@
 package com.project.trading;
 
-import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Properties;
 
 public class DBCreator {
     public static void main(String[] args) throws Exception {
-        String url = "jdbc:mysql://localhost:3306/?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata";
-        String user = "root";
-        String p = "root";
+        Properties props = new Properties();
+        try (InputStream in = DBCreator.class.getClassLoader().getResourceAsStream("db.properties")) {
+            if (in != null) {
+                props.load(in);
+            }
+        }
+        String fullUrl = props.getProperty("db.url", "jdbc:mysql://localhost:3306/papertrade_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata");
+        String user = props.getProperty("db.user", "root");
+        String p = props.getProperty("db.password", "root");
 
-        try (Connection c = DriverManager.getConnection(url, user, p);
+        // Parse baseUrl without target database name to allow DROP/CREATE DATABASE
+        String baseUrl = fullUrl;
+        int slashIdx = fullUrl.indexOf("3306/");
+        if (slashIdx != -1) {
+            int qIdx = fullUrl.indexOf("?", slashIdx);
+            baseUrl = fullUrl.substring(0, slashIdx + 5) + (qIdx != -1 ? fullUrl.substring(qIdx) : "");
+        }
+
+        try (Connection c = DriverManager.getConnection(baseUrl, user, p);
              Statement s = c.createStatement()) {
              
             System.out.println("Creating database papertrade_test...");
@@ -32,7 +48,7 @@ public class DBCreator {
     }
 
     private static void executeScript(Statement s, String path) throws Exception {
-        java.util.List<String> lines = Files.readAllLines(Paths.get(path));
+        List<String> lines = Files.readAllLines(Paths.get(path));
         StringBuilder sb = new StringBuilder();
         for (String line : lines) {
             String trimmed = line.trim();
