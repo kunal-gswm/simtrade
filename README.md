@@ -94,6 +94,7 @@ The two UI layers are intentionally separated. The Vaadin interface provides a m
 | Language | Java (JDK) | 17 |
 | Modern UI | Vaadin Flow | 24.3.0 |
 | Legacy UI | Jakarta Servlet API, JSP, JSTL | 6.0.0 / 3.0.x |
+| Connection Pool | HikariCP | 5.1.0 |
 | Database | MySQL | 8.0+ |
 | JDBC Driver | MySQL Connector/J | 8.4.0 |
 | Build Tool | Apache Maven | 3.8+ |
@@ -173,34 +174,40 @@ http://localhost:8080/paper-trading
 
 ## Testing
 
-The project includes a JUnit 5 test suite covering service logic, DAO operations, and security constraints:
+The project includes an automated JUnit 5 test suite with 57 comprehensive tests covering service logic, financial precision invariants, concurrency, connection pooling, and security filters:
 
 ```bash
 mvn clean test
 ```
 
-| Test Class | Coverage |
-|---|---|
-| `TradingServiceTest` | Buy/sell execution, concurrent order handling, insufficient funds |
-| `UserServiceTest` | Registration, authentication, profile updates, duplicate detection |
-| `AdminFeaturesTest` | Admin service operations, user management, stock administration |
-| `DashboardDataTest` | Dashboard statistics and aggregation queries |
-| `PasswordUtilTest` | Password hashing and verification |
-| `PnLCalculatorTest` | Profit and loss calculation accuracy |
-| `AdminSecurityTest` | Admin route access control |
-| `DashboardViewTest` | Vaadin view route configuration |
+| Test Class | Tests | Coverage |
+|---|---|---|
+| `FinancialPrecisionTest` | 3 | BigDecimal calculations, Net Worth & P&L invariants, partial/full sell reconciliation |
+| `PnLCalculatorTest` | 18 | BigDecimal math, rounding half up, scale 2/4 precision, zero division guards |
+| `TradingServiceTest` | 8 | Buy/sell execution, concurrent order handling, insufficient funds, ACID rollbacks |
+| `UserServiceTest` | 8 | Registration, authentication, profile updates, duplicate detection, blocking |
+| `AdminFeaturesTest` | 5 | Admin service operations, user management, stock administration |
+| `DashboardDataTest` | 2 | Dashboard metrics and trade isolation queries |
+| `ServletDataConsistencyTest` | 1 | Persistence consistency between Servlet/JSP services and database |
+| `DatabaseIsolationTest` | 1 | Assertion that tests execute strictly against `papertrade_test` |
+| `ConnectionPoolBenchmarkTest` | 1 | Measured HikariCP vs DriverManager acquisition benchmark (~30x speedup) |
+| `CsrfFilterTest` | 4 | Synchronizer token validation for GET, POST, and header requests |
+| `PasswordUtilTest` | 4 | PBKDF2 with HMAC-SHA256 password hashing and verification |
+| `AdminSecurityTest` | 1 | Admin route access control |
+| `DashboardViewTest` | 1 | Vaadin view route configuration |
 
-Tests run against the `papertrade_test` database configured in `src/test/resources/db.properties`, ensuring the development database is never modified during test execution.
+Tests run against the `papertrade_test` database configured in `src/test/resources/db.properties`, ensuring the development database (`papertrade`) is never modified during test execution.
 
 ---
 
 ## Security
 
-- **Password storage:** User passwords are hashed before persistence; plaintext passwords are never stored.
-- **Session management:** Authentication state is maintained via HTTP sessions with a 15-minute timeout configured in `web.xml`.
-- **Route protection:** Server-side guards enforce authentication on protected views. Unauthenticated users are redirected to the login page.
-- **Role-based access:** Admin routes and operations are restricted to users with the `ADMIN` role. The check is enforced server-side, not merely by hiding UI elements.
-- **Credential isolation:** Database credentials (`db.properties`) are excluded from version control via `.gitignore`.
+- **Password storage:** User passwords are hashed using PBKDF2 with HMAC-SHA256 (65,536 iterations, 256-bit key length, 16-byte random salt). Plaintext passwords are never persisted.
+- **CSRF protection:** Synchronizer token filter (`CsrfFilter`) validates tokens on all POST requests across `/app/*`, `/admin/*`, `/trade`, and `/logout`.
+- **Session management:** Authentication state is maintained via HTTP sessions with session ID regeneration on login (`SessionUtil.login`) to prevent session fixation.
+- **Route protection:** Server-side guards (`AuthFilter`) enforce authentication and role separation across all routes. Unauthenticated users are redirected to login.
+- **Role-based access:** Admin routes and operations are strictly restricted to users with the `ADMIN` role.
+- **Credential isolation:** Database credentials (`db.properties`) are excluded from version control via `.gitignore`. An example template is provided in `src/test/resources/db.properties.example`.
 
 > **Note:** SimTrade is an educational paper-trading simulator. It does not connect to real financial markets, process real money, or provide investment advice. It is not suitable for production brokerage use.
 

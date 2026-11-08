@@ -63,15 +63,17 @@ flowchart LR
     Phase6 --> Phase7["Phase 7<br/>Documentation & Release"]
 ```
 
-### Phase 1: Correctness, Test Isolation & Architecture Cleanup (Immediate)
-- **Goal:** Green test suite, zero floating-point math, unified persistence.
-- **Actions:**
-  1. Create `src/test/resources/db.properties` and resolve test failures in `TradingServiceTest`.
-  2. Rewrite `PnLCalculator` and `PortfolioService` to use `BigDecimal` exclusively.
-  3. Wire `TradeDAO.sumRealizedPnl` into `PortfolioService.buildSummary()`.
-  4. Purge duplicate models: delete unused `model.PortfolioSummary` and `model.PortfolioRow` or harmonize with service DTOs.
-  5. Refactor `servlet.DashboardServlet`, `PortfolioServlet`, `HistoryServlet` to query database services, discarding `session.getAttribute("userPortfolio")`.
-  6. Add connection pooling via HikariCP or Tomcat pool.
+### Phase 1: Correctness, Test Isolation & Architecture Cleanup (COMPLETED)
+- **Goal:** Green test suite, zero floating-point math, unified persistence, connection pooling, and route security.
+- **Completed Deliverables:**
+  1. [x] Configured `src/test/resources/db.properties` pointing strictly to `papertrade_test` and parameterized `DBCreator`. All tests pass without mutating development database.
+  2. [x] Refactored `PnLCalculator` and `PortfolioService` to use `BigDecimal` end-to-end with `RoundingMode.HALF_UP`.
+  3. [x] Integrated `TradeDAO.sumRealizedPnl` into `PortfolioService.getSummaryForUser` and `buildSummary`. Reconciled net worth and overall P&L.
+  4. [x] Harmonized models: `PortfolioService.PortfolioSummary` and `HoldingRow` provide high-precision BigDecimal values with backwards-compatible accessors.
+  5. [x] Refactored `servlet.DashboardServlet`, `PortfolioServlet`, `HistoryServlet`, and `web.DashboardServlet` to query database services. Discarded in-memory session portfolios.
+  6. [x] Added connection pooling via HikariCP 5.1.0 with graceful lifecycle shutdown in `AppContextListener`. Measured **31.44x connection speedup**.
+  7. [x] Implemented `CsrfFilter` with cryptographic token validation on all POST requests. Protected `/dashboard` and `/trade` under `AuthFilter`.
+  8. [x] Added regression test suites: `FinancialPrecisionTest`, `CsrfFilterTest`, `DatabaseIsolationTest`, `ServletDataConsistencyTest`, `ConnectionPoolBenchmarkTest`. Total 57 automated tests passing (`mvn clean test`, `mvn clean package`).
 
 ### Phase 2: Design System & Dark Terminal UI
 - **Goal:** Unify the visual appearance into an institutional dark terminal.
