@@ -1,15 +1,20 @@
 package com.project.trading.util;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+import javax.sql.DataSource;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * Thread-safe centralized database connection management backed by a HikariCP connection pool.
+ */
 public class DBConnection {
-    private static final String URL;
-    private static final String USER;
-    private static final String PASS;
+
+    private static final HikariDataSource dataSource;
 
     static {
         Properties props = new Properties();
@@ -17,20 +22,58 @@ public class DBConnection {
             if (in != null) {
                 props.load(in);
             }
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            
-            URL = props.getProperty("db.url");
-            USER = props.getProperty("db.user");
-            PASS = props.getProperty("db.password");
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load db.properties", e);
+            System.err.println("[DBConnection] Warning: Could not read db.properties: " + e.getMessage());
         }
+
+        String envUrl = System.getenv("DB_URL");
+        String envUser = System.getenv("DB_USER");
+        String envPass = System.getenv("DB_PASSWORD");
+
+        String url = envUrl != null ? envUrl : props.getProperty("db.url", "jdbc:mysql://localhost:3306/papertrade?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata");
+        String user = envUser != null ? envUser : props.getProperty("db.user", "root");
+        String pass = envPass != null ? envPass : props.getProperty("db.password", "root");
+
+        int maxPoolSize = Integer.parseInt(props.getProperty("db.pool.maxSize", "15"));
+        int minIdle = Integer.parseInt(props.getProperty("db.pool.minIdle", "2"));
+        long connTimeout = Long.parseLong(props.getProperty("db.pool.connectionTimeoutMs", "10000"));
+        long idleTimeout = Long.parseLong(props.getProperty("db.pool.idleTimeoutMs", "30000"));
+
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(pass);
+        config.setMaximumPoolSize(maxPoolSize);
+        config.setMinimumIdle(minIdle);
+        config.setConnectionTimeout(connTimeout);
+        config.setIdleTimeout(idleTimeout);
+        config.setMaxLifetime(1800000); // 30 minutes
+        config.setPoolName("SimTrade-HikariPool");
+
+        // Performance optimizations for MySQL Connector/J
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+
+        dataSource = new HikariDataSource(config);
     }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASS);
+        return dataSource.getConnection();
     }
-    
+
+    public static DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public static void closePool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+        }
+    }
+
     private DBConnection() {
     }
 }

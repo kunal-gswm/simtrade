@@ -31,6 +31,7 @@
             <div class="card">
                 <h2 class="card-title">Account Details</h2>
                 <form action="${pageContext.request.contextPath}/app/profile" method="POST" class="form-grid">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                     <input type="hidden" name="action" value="profile">
 
                     <div class="form-group">
@@ -67,6 +68,7 @@
             <div class="card">
                 <h2 class="card-title">Change Password</h2>
                 <form action="${pageContext.request.contextPath}/app/profile" method="POST" class="form-grid">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                     <input type="hidden" name="action" value="password">
 
                     <div class="form-group">

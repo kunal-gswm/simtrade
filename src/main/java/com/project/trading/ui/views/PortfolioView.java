@@ -27,6 +27,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.Locale;
 
@@ -127,11 +128,11 @@ public class PortfolioView extends Div {
                 .setHeader("Market Value").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(row -> {
-            String pnlText = currencyFormat.format(row.unrealizedPnl) + " (" + percentFormat.format(row.unrealizedPct / 100.0) + ")";
+            String pnlText = currencyFormat.format(row.unrealizedPnl) + " (" + percentFormat.format(row.unrealizedPct.doubleValue() / 100.0) + ")";
             Span pnlSpan = new Span(pnlText);
-            if (row.unrealizedPnl > 0) {
+            if (row.isPositive() && row.unrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
                 pnlSpan.addClassName("st-positive");
-            } else if (row.unrealizedPnl < 0) {
+            } else if (row.unrealizedPnl.compareTo(BigDecimal.ZERO) < 0) {
                 pnlSpan.addClassName("st-negative");
             }
             pnlSpan.getStyle().set("font-weight", "600").set("font-size", "13px");
@@ -285,7 +286,7 @@ public class PortfolioView extends Div {
 
         qtyField.addValueChangeListener(e -> {
             if (e.getValue() != null && e.getValue() > 0) {
-                estValue.setText(currencyFormat.format(row.currentPrice * e.getValue()));
+                estValue.setText(currencyFormat.format(row.currentPrice.multiply(BigDecimal.valueOf(e.getValue()))));
             }
         });
 

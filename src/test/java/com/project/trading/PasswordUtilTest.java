@@ -1,50 +1,40 @@
 package com.project.trading;
 
 import com.project.trading.util.PasswordUtil;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class PasswordUtilTest {
 
-    public static void main(String[] args) {
-        System.out.println("Running PasswordUtil verification tests...");
-
-        // Test 1: Dynamic hash and verify
+    @Test
+    void testDynamicHashAndVerify() {
         String password = "TestPassword@123";
         String hash = PasswordUtil.hash(password.toCharArray());
-        if (hash == null || !hash.contains(":")) {
-            throw new AssertionError("Test 1 Failed: Generated hash is invalid");
-        }
-        if (!PasswordUtil.verify(password.toCharArray(), hash)) {
-            throw new AssertionError("Test 1 Failed: Password verification returned false");
-        }
-        if (PasswordUtil.verify("WrongPassword".toCharArray(), hash)) {
-            throw new AssertionError("Test 1 Failed: Wrong password was accepted");
-        }
-        System.out.println("Test 1 (Dynamic Hash & Verify): PASSED");
+        assertNotNull(hash, "Generated hash should not be null");
+        assertTrue(hash.contains(":"), "Generated hash should contain salt:hash delimiter");
+        assertTrue(PasswordUtil.verify(password.toCharArray(), hash), "Verification with correct password should pass");
+        assertFalse(PasswordUtil.verify("WrongPassword".toCharArray(), hash), "Verification with wrong password should fail");
+    }
 
-        // Test 2: Verify against seed.sql Admin@123 hash
+    @Test
+    void testSeedAdminHashVerification() {
         String adminHash = "0+3DUVGW/WjfLstenwOF3w==:opvQZCOrEjgqCLsOOnh8rXweOBhILK0+zdi/c1ELKOk=";
-        if (!PasswordUtil.verify("Admin@123".toCharArray(), adminHash)) {
-            throw new AssertionError("Test 2 Failed: Admin@123 verification failed against seed hash");
-        }
-        if (PasswordUtil.verify("WrongPass".toCharArray(), adminHash)) {
-            throw new AssertionError("Test 2 Failed: Wrong password matched admin hash");
-        }
-        System.out.println("Test 2 (Seed Admin Hash Verification): PASSED");
+        assertTrue(PasswordUtil.verify("Admin@123".toCharArray(), adminHash), "Admin@123 verification failed against seed hash");
+        assertFalse(PasswordUtil.verify("WrongPass".toCharArray(), adminHash), "Wrong password matched admin hash");
+    }
 
-        // Test 3: Verify against seed.sql Demo@123 hash for rahul
+    @Test
+    void testSeedRahulHashVerification() {
         String rahulHash = "GkhX+Tj0sacIqQQ0GZC6XA==:Uqu0H3XXIMG9lS3wtbuIwdmk6fbIXMCdBHtsSaZJi4E=";
-        if (!PasswordUtil.verify("Demo@123".toCharArray(), rahulHash)) {
-            throw new AssertionError("Test 3 Failed: Demo@123 verification failed for rahul hash");
-        }
-        System.out.println("Test 3 (Seed Rahul Hash Verification): PASSED");
+        assertTrue(PasswordUtil.verify("Demo@123".toCharArray(), rahulHash), "Demo@123 verification failed for rahul hash");
+        assertFalse(PasswordUtil.verify("WrongPass".toCharArray(), rahulHash), "Wrong password matched rahul hash");
+    }
 
-        // Test 4: Verify against seed.sql Demo@123 hash for priya
+    @Test
+    void testSeedPriyaHashVerification() {
         String priyaHash = "wBU07JGZc/buhmqgpMrkaw==:t2pmqPYP34CL8gfaMhpqRZt89Vn7RuVsK7nONk4yOWk=";
-        if (!PasswordUtil.verify("Demo@123".toCharArray(), priyaHash)) {
-            throw new AssertionError("Test 4 Failed: Demo@123 verification failed for priya hash");
-        }
-        System.out.println("Test 4 (Seed Priya Hash Verification): PASSED");
-
-        System.out.println("\nALL PASSWORDUTIL VERIFICATION TESTS PASSED SUCCESSFULLY!");
+        assertTrue(PasswordUtil.verify("Demo@123".toCharArray(), priyaHash), "Demo@123 verification failed for priya hash");
+        assertFalse(PasswordUtil.verify("WrongPass".toCharArray(), priyaHash), "Wrong password matched priya hash");
     }
 }

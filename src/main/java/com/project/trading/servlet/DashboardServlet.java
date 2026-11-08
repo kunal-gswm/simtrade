@@ -1,48 +1,45 @@
 package com.project.trading.servlet;
 
-import com.project.trading.model.Portfolio;
-import com.project.trading.model.TradeOrder;
+import com.project.trading.model.AuthUser;
+import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
+import com.project.trading.service.TradingService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.util.List;
 
 /**
  * Serves the user dashboard (T41).
- * Reads the portfolio from session, computes P&L, and forwards to dashboard.jsp.
+ * Loads real database-backed portfolio metrics and trade history.
  * URL: /app/dashboard
  */
 @WebServlet("/app/dashboard")
-public class DashboardServlet extends HttpServlet {
+public class DashboardServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 
     private final PortfolioService portfolioService = new PortfolioService();
+    private final TradingService tradingService = new TradingService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("userPortfolio") == null) {
-            resp.sendRedirect(req.getContextPath() + "/dashboard"); // fall back to main servlet
+        AuthUser user = currentUser(req);
+        if (user == null) {
+            redirect(req, resp, "/login");
             return;
         }
 
-        Portfolio portfolio = (Portfolio) session.getAttribute("userPortfolio");
-        PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(portfolio);
-
-        @SuppressWarnings("unchecked")
-        List<TradeOrder> recentTrades = (List<TradeOrder>) session.getAttribute("tradeFeed");
+        PortfolioService.PortfolioSummary summary = portfolioService.getSummaryForUser(user.getId());
+        List<Trade> recentTrades = tradingService.getHistory(user.getId(), 5);
 
         req.setAttribute("summary", summary);
         req.setAttribute("recentTrades", recentTrades);
-        req.getRequestDispatcher("/WEB-INF/jsp/dashboard.jsp").forward(req, resp);
+        forward(req, resp, "dashboard.jsp");
     }
 }

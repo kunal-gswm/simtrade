@@ -68,6 +68,7 @@
             <c:when test="${not empty editStock}">
                 <h3>Edit Stock: <c:out value="${editStock.symbol}"/></h3>
                 <form action="${pageContext.request.contextPath}/admin/stocks" method="post">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                     <input type="hidden" name="action" value="edit">
                     <input type="hidden" name="id" value="${editStock.id}">
                     <div class="form-row">
@@ -97,6 +98,7 @@
             <c:otherwise>
                 <h3>Add New Stock</h3>
                 <form action="${pageContext.request.contextPath}/admin/stocks" method="post">
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                     <input type="hidden" name="action" value="add">
                     <div class="form-row">
                         <div class="form-group">
@@ -165,6 +167,7 @@
                             <div style="display: flex; gap: 8px;">
                                 <a href="${pageContext.request.contextPath}/admin/stocks?edit=${stock.id}" class="btn btn-primary" style="padding: 4px 10px; font-size: 13px;">Edit</a>
                                 <form action="${pageContext.request.contextPath}/admin/stocks" method="post" style="display: inline; margin: 0;">
+                                    <input type="hidden" name="csrfToken" value="${csrfToken}">
                                     <input type="hidden" name="action" value="toggle">
                                     <input type="hidden" name="id" value="${stock.id}">
                                     <input type="hidden" name="active" value="${!stock.active}">

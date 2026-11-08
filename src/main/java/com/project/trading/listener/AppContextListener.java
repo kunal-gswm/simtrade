@@ -1,6 +1,7 @@
 package com.project.trading.listener;
 
 import com.project.trading.simulator.PriceSimulator;
+import com.project.trading.util.DBConnection;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
@@ -23,5 +24,6 @@ public class AppContextListener implements ServletContextListener {
         if (attr instanceof PriceSimulator) {
             ((PriceSimulator) attr).shutdownNow();
         }
+        DBConnection.closePool();
     }
 }

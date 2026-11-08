@@ -1,6 +1,8 @@
 package com.project.trading.model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,21 +13,25 @@ public class Portfolio implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private int userId;
-    private double cashBalance;
+    private BigDecimal cash = BigDecimal.valueOf(100000.00).setScale(2, RoundingMode.HALF_UP);
     private List<Holding> holdings;
 
     public Portfolio() {
         this.holdings = new ArrayList<>();
     }
 
-    public Portfolio(int userId, double cashBalance, List<Holding> holdings) {
+    public Portfolio(int userId, BigDecimal cash, List<Holding> holdings) {
         this.userId = userId;
-        this.cashBalance = cashBalance;
+        this.cash = cash != null ? cash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.holdings = holdings != null ? holdings : new ArrayList<>();
     }
 
+    public Portfolio(int userId, double cashBalance, List<Holding> holdings) {
+        this(userId, BigDecimal.valueOf(cashBalance), holdings);
+    }
+
     public Portfolio(int userId, List<Holding> holdings) {
-        this(userId, 100000.0, holdings); // Default 1 Lakh simulated cash
+        this(userId, BigDecimal.valueOf(100000.00), holdings);
     }
 
     public int getUserId() {
@@ -36,12 +42,20 @@ public class Portfolio implements Serializable {
         this.userId = userId;
     }
 
+    public BigDecimal getCash() {
+        return cash;
+    }
+
+    public void setCash(BigDecimal cash) {
+        this.cash = cash != null ? cash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+
     public double getCashBalance() {
-        return Math.round(cashBalance * 100.0) / 100.0;
+        return cash.doubleValue();
     }
 
     public void setCashBalance(double cashBalance) {
-        this.cashBalance = cashBalance;
+        setCash(BigDecimal.valueOf(cashBalance));
     }
 
     public List<Holding> getHoldings() {
@@ -49,64 +63,103 @@ public class Portfolio implements Serializable {
     }
 
     public void setHoldings(List<Holding> holdings) {
-        this.holdings = holdings;
+        this.holdings = holdings != null ? holdings : new ArrayList<>();
+    }
+
+    public synchronized void debit(BigDecimal amount) {
+        if (amount != null) {
+            this.cash = this.cash.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        }
+    }
+
+    public synchronized void credit(BigDecimal amount) {
+        if (amount != null) {
+            this.cash = this.cash.add(amount).setScale(2, RoundingMode.HALF_UP);
+        }
     }
 
     public synchronized void debit(double amount) {
-        this.cashBalance -= amount;
+        debit(BigDecimal.valueOf(amount));
     }
 
     public synchronized void credit(double amount) {
-        this.cashBalance += amount;
+        credit(BigDecimal.valueOf(amount));
+    }
+
+    public BigDecimal getTotalHoldingsInvestmentBigDecimal() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Holding h : holdings) {
+            total = total.add(h.getTotalInvestmentBigDecimal());
+        }
+        return total.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getTotalHoldingsValueBigDecimal() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Holding h : holdings) {
+            total = total.add(h.getCurrentValueBigDecimal());
+        }
+        return total.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getTotalNetWorthBigDecimal() {
+        return cash.add(getTotalHoldingsValueBigDecimal()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getTotalProfitLossBigDecimal() {
+        return getTotalHoldingsValueBigDecimal().subtract(getTotalHoldingsInvestmentBigDecimal()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getTotalProfitLossPercentBigDecimal() {
+        BigDecimal invested = getTotalHoldingsInvestmentBigDecimal();
+        if (invested.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        return getTotalProfitLossBigDecimal().divide(invested, 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public double getTotalHoldingsInvestment() {
-        double total = 0.0;
-        for (Holding h : holdings) {
-            total += h.getTotalInvestment();
-        }
-        return Math.round(total * 100.0) / 100.0;
+        return getTotalHoldingsInvestmentBigDecimal().doubleValue();
     }
 
     public double getTotalHoldingsValue() {
-        double total = 0.0;
-        for (Holding h : holdings) {
-            total += h.getCurrentValue();
-        }
-        return Math.round(total * 100.0) / 100.0;
+        return getTotalHoldingsValueBigDecimal().doubleValue();
     }
 
     public double getTotalNetWorth() {
-        return Math.round((cashBalance + getTotalHoldingsValue()) * 100.0) / 100.0;
+        return getTotalNetWorthBigDecimal().doubleValue();
     }
 
     public double getTotalProfitLoss() {
-        return Math.round((getTotalHoldingsValue() - getTotalHoldingsInvestment()) * 100.0) / 100.0;
+        return getTotalProfitLossBigDecimal().doubleValue();
     }
 
     public double getTotalProfitLossPercent() {
-        double invested = getTotalHoldingsInvestment();
-        if (invested <= 0) return 0.0;
-        return Math.round(((getTotalHoldingsValue() - invested) / invested * 100.0) * 100.0) / 100.0;
+        return getTotalProfitLossPercentBigDecimal().doubleValue();
     }
 
     public Holding getHolding(String symbol) {
+        if (symbol == null) return null;
         for (Holding h : holdings) {
-            if (h.getStockSymbol().equalsIgnoreCase(symbol)) {
+            if (h.getStockSymbol() != null && h.getStockSymbol().equalsIgnoreCase(symbol)) {
                 return h;
             }
         }
         return null;
     }
 
-    public synchronized void addOrUpdateHolding(String symbol, String name, int quantity, double price) {
+    public synchronized void addOrUpdateHolding(String symbol, String name, int quantity, BigDecimal price) {
         Holding existing = getHolding(symbol);
         if (existing != null) {
             existing.addShares(quantity, price);
-            existing.setCurrentPrice(price);
+            existing.setCurrentPriceBigDecimal(price);
         } else {
             holdings.add(new Holding(symbol, name, quantity, price, price));
         }
+    }
+
+    public synchronized void addOrUpdateHolding(String symbol, String name, int quantity, double price) {
+        addOrUpdateHolding(symbol, name, quantity, BigDecimal.valueOf(price));
     }
 
     public synchronized boolean removeOrReduceHolding(String symbol, int quantity) {

@@ -1,40 +1,41 @@
 package com.project.trading.servlet;
 
-import com.project.trading.model.TradeOrder;
+import com.project.trading.model.AuthUser;
+import com.project.trading.model.Trade;
+import com.project.trading.service.TradingService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Serves the trade history page (T40).
+ * Loads real executed trades from the database via TradingService.
  * URL: /app/history
  */
 @WebServlet("/app/history")
-public class HistoryServlet extends HttpServlet {
+public class HistoryServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
+
+    private final TradingService tradingService = new TradingService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        HttpSession session = req.getSession(false);
+        AuthUser user = currentUser(req);
+        if (user == null) {
+            redirect(req, resp, "/login");
+            return;
+        }
 
-        @SuppressWarnings("unchecked")
-        List<TradeOrder> trades = (session != null)
-                ? (List<TradeOrder>) session.getAttribute("tradeFeed")
-                : Collections.emptyList();
-
-        if (trades == null) trades = Collections.emptyList();
+        List<Trade> trades = tradingService.getHistory(user.getId(), 100);
 
         req.setAttribute("trades", trades);
-        req.getRequestDispatcher("/WEB-INF/jsp/history.jsp").forward(req, resp);
+        forward(req, resp, "history.jsp");
     }
 }
