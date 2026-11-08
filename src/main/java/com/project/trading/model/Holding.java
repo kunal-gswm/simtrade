@@ -13,19 +13,24 @@ public class Holding implements Serializable {
     private String stockSymbol;
     private String stockName;
     private int quantity;
-    private BigDecimal avgBuyPrice = BigDecimal.ZERO;
-    private double currentPrice;
+    private BigDecimal avgBuyPrice = BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+    private BigDecimal currentPrice = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     private Stock stock;
 
     public Holding() {}
 
     public Holding(String stockSymbol, String stockName, int quantity,
-                   double averagePrice, double currentPrice) {
+                   BigDecimal averagePrice, BigDecimal currentPrice) {
         this.stockSymbol = stockSymbol;
         this.stockName = stockName;
         this.quantity = quantity;
-        this.avgBuyPrice = BigDecimal.valueOf(averagePrice);
-        this.currentPrice = currentPrice;
+        this.avgBuyPrice = averagePrice != null ? averagePrice.setScale(4, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+        this.currentPrice = currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public Holding(String stockSymbol, String stockName, int quantity,
+                   double averagePrice, double currentPrice) {
+        this(stockSymbol, stockName, quantity, BigDecimal.valueOf(averagePrice), BigDecimal.valueOf(currentPrice));
     }
 
     public Holding(String stockSymbol, int quantity, double averagePrice) {
@@ -50,40 +55,78 @@ public class Holding implements Serializable {
 
     public int getQuantity() { return quantity; }
     public void setQuantity(int quantity) { this.quantity = quantity; }
+
     public BigDecimal getAvgBuyPrice() { return avgBuyPrice; }
     public void setAvgBuyPrice(BigDecimal avgBuyPrice) {
-        this.avgBuyPrice = avgBuyPrice == null ? BigDecimal.ZERO : avgBuyPrice;
+        this.avgBuyPrice = avgBuyPrice == null ? BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP) : avgBuyPrice.setScale(4, RoundingMode.HALF_UP);
     }
+
     public Stock getStock() { return stock; }
-    public void setStock(Stock stock) { this.stock = stock; }
-
-    /** Portfolio UI compatibility accessors; BigDecimal remains the stored buy price. */
-    public double getAveragePrice() { return avgBuyPrice.doubleValue(); }
-    public void setAveragePrice(double averagePrice) { avgBuyPrice = BigDecimal.valueOf(averagePrice); }
-    public double getCurrentPrice() { return currentPrice; }
-    public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
-
-    public double getTotalInvestment() {
-        return money(avgBuyPrice.multiply(BigDecimal.valueOf(quantity)).doubleValue());
-    }
-    public double getCurrentValue() { return money(quantity * currentPrice); }
-    public double getProfitLoss() { return money(getCurrentValue() - getTotalInvestment()); }
-    public double getProfitLossPercent() {
-        double investment = getTotalInvestment();
-        return investment <= 0 ? 0.0 : money((getCurrentValue() - investment) / investment * 100.0);
-    }
-    public boolean isPositive() { return getProfitLoss() >= 0; }
-
-    public void addShares(int additionalQuantity, double purchasePrice) {
-        BigDecimal totalCost = avgBuyPrice.multiply(BigDecimal.valueOf(quantity))
-                .add(BigDecimal.valueOf(purchasePrice).multiply(BigDecimal.valueOf(additionalQuantity)));
-        quantity += additionalQuantity;
-        if (quantity > 0) {
-            avgBuyPrice = totalCost.divide(BigDecimal.valueOf(quantity), 10, RoundingMode.HALF_UP);
+    public void setStock(Stock stock) {
+        this.stock = stock;
+        if (stock != null && stock.getPrice() != null) {
+            this.currentPrice = stock.getPrice();
         }
     }
 
-    public void removeShares(int quantityToRemove) { quantity -= quantityToRemove; }
+    public BigDecimal getCurrentPriceBigDecimal() {
+        if (stock != null && stock.getPrice() != null) {
+            return stock.getPrice();
+        }
+        return currentPrice;
+    }
 
-    private static double money(double value) { return Math.round(value * 100.0) / 100.0; }
+    public void setCurrentPriceBigDecimal(BigDecimal currentPrice) {
+        this.currentPrice = currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public double getAveragePrice() { return avgBuyPrice.doubleValue(); }
+    public void setAveragePrice(double averagePrice) { setAvgBuyPrice(BigDecimal.valueOf(averagePrice)); }
+    public double getCurrentPrice() { return getCurrentPriceBigDecimal().doubleValue(); }
+    public void setCurrentPrice(double currentPrice) { setCurrentPriceBigDecimal(BigDecimal.valueOf(currentPrice)); }
+
+    public BigDecimal getTotalInvestmentBigDecimal() {
+        return avgBuyPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getCurrentValueBigDecimal() {
+        return getCurrentPriceBigDecimal().multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getProfitLossBigDecimal() {
+        return getCurrentValueBigDecimal().subtract(getTotalInvestmentBigDecimal());
+    }
+
+    public BigDecimal getProfitLossPercentBigDecimal() {
+        BigDecimal inv = getTotalInvestmentBigDecimal();
+        if (inv.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return getProfitLossBigDecimal().divide(inv, 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public double getTotalInvestment() { return getTotalInvestmentBigDecimal().doubleValue(); }
+    public double getCurrentValue() { return getCurrentValueBigDecimal().doubleValue(); }
+    public double getProfitLoss() { return getProfitLossBigDecimal().doubleValue(); }
+    public double getProfitLossPercent() { return getProfitLossPercentBigDecimal().doubleValue(); }
+    public boolean isPositive() { return getProfitLossBigDecimal().compareTo(BigDecimal.ZERO) >= 0; }
+
+    public void addShares(int additionalQuantity, BigDecimal purchasePrice) {
+        BigDecimal currentTotal = avgBuyPrice.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal addedTotal = purchasePrice.multiply(BigDecimal.valueOf(additionalQuantity));
+        quantity += additionalQuantity;
+        if (quantity > 0) {
+            avgBuyPrice = currentTotal.add(addedTotal).divide(BigDecimal.valueOf(quantity), 4, RoundingMode.HALF_UP);
+        }
+    }
+
+    public void addShares(int additionalQuantity, double purchasePrice) {
+        addShares(additionalQuantity, BigDecimal.valueOf(purchasePrice));
+    }
+
+    public void removeShares(int quantityToRemove) {
+        quantity -= quantityToRemove;
+    }
 }

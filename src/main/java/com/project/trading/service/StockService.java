@@ -61,6 +61,21 @@ public class StockService {
         }
     }
 
+    public Stock getBySymbol(String symbol) throws StockNotFoundException {
+        if (symbol == null || symbol.trim().isEmpty()) {
+            throw new StockNotFoundException("Stock symbol cannot be blank.");
+        }
+        try (Connection c = DBConnection.getConnection()) {
+            Stock stock = stockDAO.findBySymbol(c, symbol.trim().toUpperCase());
+            if (stock == null) {
+                throw new StockNotFoundException("Stock not found with symbol: " + symbol);
+            }
+            return stock;
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to fetch stock with symbol: " + symbol, e);
+        }
+    }
+
     public List<Stock> listAll() {
         try (Connection c = DBConnection.getConnection()) {
             return stockDAO.findAll(c);

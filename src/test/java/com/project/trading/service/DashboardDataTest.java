@@ -58,10 +58,10 @@ public class DashboardDataTest {
         PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(
                 portfolioService.getPortfolioForUser(user.getId()));
         
-        assertEquals(100000.0, summary.cash, 0.01);
-        assertEquals(0.0, summary.totalCurrentValue, 0.01);
-        assertEquals(0.0, summary.totalInvested, 0.01);
-        assertEquals(100000.0, summary.netWorth, 0.01); // 100k cash + 0 stock
-        assertEquals(0.0, summary.overallPnl, 0.01);
+        assertEquals(new java.math.BigDecimal("100000.00"), summary.cash);
+        assertEquals(new java.math.BigDecimal("0.00"), summary.totalCurrentValue);
+        assertEquals(new java.math.BigDecimal("0.00"), summary.totalInvested);
+        assertEquals(new java.math.BigDecimal("100000.00"), summary.netWorth);
+        assertEquals(new java.math.BigDecimal("0.00"), summary.overallPnl);
     }
 }

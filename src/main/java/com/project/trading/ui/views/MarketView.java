@@ -332,9 +332,9 @@ public class MarketView extends Div {
         try {
             Portfolio p = portfolioService.getPortfolioForUser(user.getId());
             PortfolioService.PortfolioSummary s = portfolioService.buildSummary(p);
-            double remainingCash = s.cash - stock.getPrice().doubleValue();
+            BigDecimal remainingCash = s.cash.subtract(stock.getPrice());
             remCashValue.setText(currencyFormat.format(remainingCash));
-            if (remainingCash < 0) {
+            if (remainingCash.compareTo(BigDecimal.ZERO) < 0) {
                 remCashValue.addClassName("st-negative");
             }
         } catch (DataAccessException ignored) { }
@@ -348,9 +348,9 @@ public class MarketView extends Div {
                 try {
                     Portfolio p = portfolioService.getPortfolioForUser(user.getId());
                     PortfolioService.PortfolioSummary s = portfolioService.buildSummary(p);
-                    double remaining = s.cash - totalCost.doubleValue();
+                    BigDecimal remaining = s.cash.subtract(totalCost);
                     remCashValue.setText(currencyFormat.format(remaining));
-                    if (remaining < 0) {
+                    if (remaining.compareTo(BigDecimal.ZERO) < 0) {
                         remCashValue.addClassName("st-negative");
                     } else {
                         remCashValue.removeClassName("st-negative");
