@@ -5,9 +5,10 @@ import com.project.trading.service.StockService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
@@ -21,85 +22,125 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 
 @Route(value = "admin/stocks", layout = AdminLayout.class)
-@PageTitle("Stock Management | Admin")
+@PageTitle("Stock Catalog | SimTrade Admin")
 public class AdminStocksView extends VerticalLayout {
 
     private final StockService stockService = new StockService();
     private final Grid<Stock> grid = new Grid<>(Stock.class, false);
     private final TextField searchField = new TextField();
+    private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     public AdminStocksView() {
+        addClassName("st-page");
         setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        setPadding(false);
+        setSpacing(false);
 
-        H1 title = new H1("Stock Management");
-        title.getStyle().set("margin-top", "0").set("color", "var(--st-text-main)");
+        Div headerContainer = new Div();
+        headerContainer.addClassName("st-header-container");
+
+        Div titleGroup = new Div();
+        titleGroup.addClassName("st-page-title-group");
+
+        H1 title = new H1("Stock Catalog Management");
+        title.addClassName("st-page-title");
+        Paragraph subtitle = new Paragraph("Register new equity instruments, update company profiles, and manage tradability.");
+        subtitle.addClassName("st-page-subtitle");
+
+        titleGroup.add(title, subtitle);
+        headerContainer.add(titleGroup);
+        add(headerContainer);
 
         configureGrid();
 
-        searchField.setPlaceholder("Search by symbol or name...");
+        searchField.setPlaceholder("Search symbol or company name...");
         searchField.setClearButtonVisible(true);
         searchField.setValueChangeMode(ValueChangeMode.LAZY);
         searchField.addValueChangeListener(e -> refreshData());
+        searchField.addClassName("st-search-field");
         searchField.setWidth("300px");
 
-        Button addBtn = new Button("Add Stock", e -> openStockForm(null));
-        addBtn.getStyle().set("background", "var(--st-primary-color)").set("color", "white");
+        Button addBtn = new Button("Register New Stock", e -> openStockForm(null));
+        addBtn.addClassNames("st-btn", "st-btn-primary");
+        addBtn.getElement().removeAttribute("theme");
 
         HorizontalLayout toolbar = new HorizontalLayout(searchField, addBtn);
-        toolbar.getStyle().set("margin-bottom", "16px");
+        toolbar.getStyle().set("margin-bottom", "16px").set("align-items", "center");
 
-        add(title, toolbar, grid);
+        Div tableSurface = new Div(grid);
+        tableSurface.addClassName("st-table-surface");
+        tableSurface.setWidthFull();
+
+        add(toolbar, tableSurface);
         refreshData();
     }
 
     private void configureGrid() {
         grid.addColumn(Stock::getId).setHeader("ID").setAutoWidth(true).setFlexGrow(0);
-        grid.addColumn(Stock::getSymbol).setHeader("Symbol").setSortable(true);
-        grid.addColumn(Stock::getCompanyName).setHeader("Company Name").setSortable(true);
-        grid.addColumn(Stock::getSector).setHeader("Sector").setSortable(true);
-        grid.addColumn(Stock::getPrice).setHeader("Price").setSortable(true);
-        
+
+        grid.addComponentColumn(stock -> {
+            Span symbol = new Span(stock.getSymbol());
+            symbol.addClassName("st-symbol");
+            return symbol;
+        }).setHeader("Symbol").setSortable(true).setAutoWidth(true);
+
+        grid.addColumn(Stock::getCompanyName).setHeader("Company Name").setSortable(true).setFlexGrow(1);
+
+        grid.addComponentColumn(stock -> {
+            Span badge = new Span(stock.getSector() != null ? stock.getSector() : "General");
+            badge.addClassName("st-badge-sector");
+            return badge;
+        }).setHeader("Sector").setSortable(true).setAutoWidth(true);
+
+        grid.addComponentColumn(stock -> {
+            Span price = new Span(currencyFormat.format(stock.getPrice()));
+            price.addClassName("tabular-num");
+            return price;
+        }).setHeader("Current Price").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
         grid.addComponentColumn(stock -> {
             Span statusSpan = new Span(stock.isActive() ? "ACTIVE" : "INACTIVE");
-            statusSpan.getStyle().set("padding", "4px 8px").set("border-radius", "4px").set("font-size", "0.85rem");
+            statusSpan.addClassName("st-badge");
             if (stock.isActive()) {
-                statusSpan.getStyle().set("background", "rgba(16, 185, 129, 0.1)").set("color", "var(--st-success-color)");
+                statusSpan.addClassName("st-badge-buy");
             } else {
-                statusSpan.getStyle().set("background", "rgba(239, 68, 68, 0.1)").set("color", "var(--st-danger-color)");
+                statusSpan.addClassName("st-badge-sell");
             }
             return statusSpan;
-        }).setHeader("Status").setSortable(true);
+        }).setHeader("Status").setSortable(true).setAutoWidth(true);
 
         grid.addComponentColumn(stock -> {
             HorizontalLayout actions = new HorizontalLayout();
             Button editBtn = new Button("Edit", e -> openStockForm(stock));
-            editBtn.getStyle().set("color", "var(--st-primary-color)");
+            editBtn.addClassNames("st-btn", "st-btn-secondary");
+            editBtn.getElement().removeAttribute("theme");
+            editBtn.getStyle().set("height", "26px").set("font-size", "11px").set("padding", "0 10px");
 
             Button toggleBtn = new Button(stock.isActive() ? "Deactivate" : "Activate", e -> confirmToggleActive(stock));
-            toggleBtn.getStyle().set("color", stock.isActive() ? "var(--st-danger-color)" : "var(--st-success-color)");
+            toggleBtn.addClassNames("st-btn", stock.isActive() ? "st-btn-sell" : "st-btn-buy");
+            toggleBtn.getElement().removeAttribute("theme");
+            toggleBtn.getStyle().set("height", "26px").set("font-size", "11px").set("padding", "0 10px");
 
             actions.add(editBtn, toggleBtn);
             return actions;
-        }).setHeader("Actions");
+        }).setHeader("Actions").setAutoWidth(true);
 
-        grid.addThemeName("row-stripes");
+        grid.setAllRowsVisible(true);
     }
 
     private void refreshData() {
         String filter = searchField.getValue();
         List<Stock> stocks;
         if (filter != null && !filter.trim().isEmpty()) {
-            stocks = stockService.search(filter);
-            // StockService.search currently only returns active. Let's do client-side filter to include inactive.
             List<Stock> all = stockService.listAll();
-            stocks = all.stream().filter(s -> 
-                s.getSymbol().toLowerCase().contains(filter.toLowerCase()) || 
-                s.getCompanyName().toLowerCase().contains(filter.toLowerCase())
+            stocks = all.stream().filter(s ->
+                    s.getSymbol().toLowerCase().contains(filter.toLowerCase()) ||
+                            s.getCompanyName().toLowerCase().contains(filter.toLowerCase())
             ).toList();
         } else {
             stocks = stockService.listAll();
@@ -110,9 +151,12 @@ public class AdminStocksView extends VerticalLayout {
     private void confirmToggleActive(Stock stock) {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle(stock.isActive() ? "Confirm Deactivation" : "Confirm Activation");
+        dialog.setWidth("min(400px, 92vw)");
 
-        Paragraph text = new Paragraph("Are you sure you want to " + (stock.isActive() ? "deactivate" : "activate") + 
-                                       " stock '" + stock.getSymbol() + "'?");
+        Paragraph text = new Paragraph("Are you sure you want to " + (stock.isActive() ? "deactivate" : "activate") +
+                " stock '" + stock.getSymbol() + "'? " +
+                (stock.isActive() ? "Traders will no longer be able to place buy orders for this instrument." : "Traders will be able to trade this instrument again."));
+        text.getStyle().set("color", "var(--st-text-secondary)").set("font-size", "13px").set("line-height", "1.5");
         dialog.add(text);
 
         Button confirm = new Button("Confirm", e -> {
@@ -125,9 +169,13 @@ public class AdminStocksView extends VerticalLayout {
                 showError("Failed to update stock status: " + ex.getMessage());
             }
         });
-        confirm.getStyle().set("background", "var(--st-primary-color)").set("color", "white");
+        confirm.addClassNames("st-btn", stock.isActive() ? "st-btn-sell" : "st-btn-buy");
+        confirm.getElement().removeAttribute("theme");
 
         Button cancel = new Button("Cancel", e -> dialog.close());
+        cancel.addClassNames("st-btn", "st-btn-secondary");
+        cancel.getElement().removeAttribute("theme");
+
         dialog.getFooter().add(cancel, confirm);
         dialog.open();
     }
@@ -135,7 +183,8 @@ public class AdminStocksView extends VerticalLayout {
     private void openStockForm(Stock stock) {
         Dialog dialog = new Dialog();
         boolean isNew = (stock == null);
-        dialog.setHeaderTitle(isNew ? "Add New Stock" : "Edit Stock");
+        dialog.setHeaderTitle(isNew ? "Register New Equity" : "Edit Stock · " + stock.getSymbol());
+        dialog.setWidth("min(480px, 92vw)");
 
         FormLayout form = new FormLayout();
 
@@ -143,26 +192,26 @@ public class AdminStocksView extends VerticalLayout {
         TextField nameField = new TextField("Company Name");
         TextField sectorField = new TextField("Sector");
         TextArea descField = new TextArea("Description");
-        BigDecimalField priceField = new BigDecimalField("Price");
+        BigDecimalField priceField = new BigDecimalField("Initial Reference Price");
 
         if (!isNew) {
             symbolField.setValue(stock.getSymbol());
-            symbolField.setReadOnly(true); // symbol cannot be changed
+            symbolField.setReadOnly(true);
             nameField.setValue(stock.getCompanyName());
             sectorField.setValue(stock.getSector() != null ? stock.getSector() : "");
             descField.setValue(stock.getDescription() != null ? stock.getDescription() : "");
             priceField.setValue(stock.getPrice());
-            priceField.setReadOnly(true); // price managed separately
+            priceField.setReadOnly(true);
         }
 
         form.add(symbolField, nameField, sectorField, priceField, descField);
         dialog.add(form);
 
-        Button save = new Button("Save", e -> {
+        Button save = new Button("Save Instrument", e -> {
             try {
                 if (isNew) {
-                    stockService.add(symbolField.getValue(), nameField.getValue(), sectorField.getValue(), 
-                                     descField.getValue(), priceField.getValue());
+                    stockService.add(symbolField.getValue(), nameField.getValue(), sectorField.getValue(),
+                            descField.getValue(), priceField.getValue());
                     showSuccess("Stock created successfully.");
                 } else {
                     stockService.update(stock.getId(), nameField.getValue(), sectorField.getValue(), descField.getValue());
@@ -174,9 +223,13 @@ public class AdminStocksView extends VerticalLayout {
                 showError("Validation Error: " + ex.getMessage());
             }
         });
-        save.getStyle().set("background", "var(--st-primary-color)").set("color", "white");
+        save.addClassNames("st-btn", "st-btn-primary");
+        save.getElement().removeAttribute("theme");
 
         Button cancel = new Button("Cancel", e -> dialog.close());
+        cancel.addClassNames("st-btn", "st-btn-secondary");
+        cancel.getElement().removeAttribute("theme");
+
         dialog.getFooter().add(cancel, save);
         dialog.open();
     }

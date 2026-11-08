@@ -11,6 +11,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
@@ -19,20 +20,25 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import java.text.NumberFormat;
+import java.util.Locale;
+
 @Route(value = "ui/profile", layout = MainLayout.class)
-@PageTitle("Profile | SimTrade")
+@PageTitle("Account Settings | SimTrade")
 public class ProfileView extends Div {
 
     private final UserService userService;
     private final SecurityService securityService;
+    private final NumberFormat currencyFormat;
     private User currentUser;
 
     public ProfileView() {
         this.userService = new UserService();
         this.securityService = new SecurityService();
-        
+        this.currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
+
         addClassName("st-page");
-        
+
         AuthUser authUser = securityService.getAuthenticatedUser();
         if (authUser == null) {
             return;
@@ -44,39 +50,58 @@ public class ProfileView extends Div {
             return;
         }
 
-        Div content = new Div();
-        content.addClassName("st-table-surface");
-        content.getStyle().set("max-width", "600px").set("margin", "0 auto").set("padding", "32px");
+        Div headerContainer = new Div();
+        headerContainer.addClassName("st-header-container");
 
-        H2 title = new H2("Account Profile");
-        title.addClassName("st-page-title");
-        title.getStyle().set("margin-bottom", "24px");
+        Div titleGroup = new Div();
+        titleGroup.addClassName("st-page-title-group");
+        H2 pageTitle = new H2("Account & Security");
+        pageTitle.addClassName("st-page-title");
+        Paragraph subtitle = new Paragraph("Trader identity, simulation virtual balance, and access credentials.");
+        subtitle.addClassName("st-page-subtitle");
+        titleGroup.add(pageTitle, subtitle);
+
+        headerContainer.add(titleGroup);
+        add(headerContainer);
+
+        Div card = new Div();
+        card.addClassName("st-table-surface");
+        card.getStyle().set("max-width", "640px").set("padding", "28px 32px").set("box-sizing", "border-box");
+
+        // Profile Details
+        H2 secTitle = new H2("Trader Profile");
+        secTitle.addClassName("st-section-title");
 
         FormLayout profileForm = new FormLayout();
-        
+
         TextField usernameField = new TextField("Username");
         usernameField.setValue(currentUser.getUsername());
         usernameField.setReadOnly(true);
-        
+
         TextField cashBalanceField = new TextField("Virtual Cash Balance");
-        cashBalanceField.setValue("₹" + currentUser.getCashBalance().toString());
+        cashBalanceField.setValue(currencyFormat.format(currentUser.getCashBalance()));
         cashBalanceField.setReadOnly(true);
 
-        TextField fullNameField = new TextField("Full Name");
+        TextField fullNameField = new TextField("Full Legal Name");
         fullNameField.setValue(currentUser.getFullName() != null ? currentUser.getFullName() : "");
-        
-        EmailField emailField = new EmailField("Email");
+
+        EmailField emailField = new EmailField("Email Address");
         emailField.setValue(currentUser.getEmail() != null ? currentUser.getEmail() : "");
 
         profileForm.add(usernameField, cashBalanceField, fullNameField, emailField);
-        profileForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("400px", 2));
+        profileForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("480px", 2)
+        );
 
         Span profileMsg = new Span();
-        profileMsg.getStyle().set("font-size", "14px").set("display", "none").set("margin-top", "8px");
+        profileMsg.getStyle().set("font-size", "13px").set("display", "none").set("margin-top", "8px");
 
-        Button updateProfileButton = new Button("Update Profile");
+        Button updateProfileButton = new Button("Save Profile Changes");
         updateProfileButton.addClassNames("st-btn", "st-btn-primary");
+        updateProfileButton.getElement().removeAttribute("theme");
         updateProfileButton.getStyle().set("margin-top", "16px");
+
         updateProfileButton.addClickListener(e -> {
             profileMsg.getStyle().set("display", "none");
             try {
@@ -92,12 +117,13 @@ public class ProfileView extends Div {
             }
         });
 
-        H2 pwdTitle = new H2("Change Password");
+        // Change Password Section
+        H2 pwdTitle = new H2("Security & Password");
         pwdTitle.addClassName("st-section-title");
-        pwdTitle.getStyle().set("margin-top", "40px").set("margin-bottom", "16px");
+        pwdTitle.getStyle().set("margin-top", "36px").set("padding-top", "24px").set("border-top", "1px solid var(--st-border-subtle)");
 
         FormLayout pwdForm = new FormLayout();
-        
+
         PasswordField currentPasswordField = new PasswordField("Current Password");
         PasswordField newPasswordField = new PasswordField("New Password");
         PasswordField confirmNewPasswordField = new PasswordField("Confirm New Password");
@@ -106,14 +132,16 @@ public class ProfileView extends Div {
         pwdForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1));
 
         Span pwdMsg = new Span();
-        pwdMsg.getStyle().set("font-size", "14px").set("display", "none").set("margin-top", "8px");
+        pwdMsg.getStyle().set("font-size", "13px").set("display", "none").set("margin-top", "8px");
 
-        Button changePwdButton = new Button("Change Password");
-        changePwdButton.addClassNames("st-btn", "st-btn-secondary"); 
+        Button changePwdButton = new Button("Update Password");
+        changePwdButton.addClassNames("st-btn", "st-btn-secondary");
+        changePwdButton.getElement().removeAttribute("theme");
         changePwdButton.getStyle().set("margin-top", "16px");
+
         changePwdButton.addClickListener(e -> {
             pwdMsg.getStyle().set("display", "none");
-            
+
             if (!newPasswordField.getValue().equals(confirmNewPasswordField.getValue())) {
                 pwdMsg.setText("New passwords do not match.");
                 pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
@@ -122,7 +150,7 @@ public class ProfileView extends Div {
 
             try {
                 userService.changePassword(currentUser.getId(), currentPasswordField.getValue(), newPasswordField.getValue());
-                pwdMsg.setText("Password changed successfully.");
+                pwdMsg.setText("Password successfully changed.");
                 pwdMsg.getStyle().set("color", "var(--st-green)").set("display", "block");
                 currentPasswordField.clear();
                 newPasswordField.clear();
@@ -131,15 +159,16 @@ public class ProfileView extends Div {
                 pwdMsg.setText(ex.getMessage());
                 pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
             } catch (Exception ex) {
-                pwdMsg.setText("Failed to change password.");
+                pwdMsg.setText("Failed to update password.");
                 pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
             }
         });
 
-        VerticalLayout layout = new VerticalLayout(title, profileForm, updateProfileButton, profileMsg, pwdTitle, pwdForm, changePwdButton, pwdMsg);
+        VerticalLayout layout = new VerticalLayout(secTitle, profileForm, updateProfileButton, profileMsg, pwdTitle, pwdForm, changePwdButton, pwdMsg);
         layout.setPadding(false);
+        layout.setSpacing(false);
 
-        content.add(layout);
-        add(content);
+        card.add(layout);
+        add(card);
     }
 }

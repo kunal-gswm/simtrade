@@ -8,19 +8,20 @@ import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
 import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.router.PageTitle;
@@ -28,11 +29,12 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Locale;
 
 @Route(value = "ui/portfolio", layout = MainLayout.class)
-@PageTitle("Portfolio | SimTrade")
+@PageTitle("Portfolio & Holdings | SimTrade")
 public class PortfolioView extends Div {
 
     private final PortfolioService portfolioService;
@@ -42,15 +44,19 @@ public class PortfolioView extends Div {
     private final NumberFormat currencyFormat;
     private final NumberFormat percentFormat;
 
+    private final Span netWorthValue;
     private final Span cashValue;
     private final Span investedValue;
     private final Span holdingsValue;
-    private final Span netWorthValue;
+    private final Span unrealizedPnlValue;
+    private final Span realizedPnlValue;
+
     private final Div emptyState;
     private final Div holdingsSection;
     private final Div tableContainer;
+    private final Div allocationContainer;
 
-    private static final String SVG_WALLET = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3\" /></svg>";
+    private static final String SVG_WALLET = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3\" /></svg>";
 
     public PortfolioView() {
         this.portfolioService = new PortfolioService();
@@ -59,50 +65,62 @@ public class PortfolioView extends Div {
         this.currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
         this.percentFormat = NumberFormat.getPercentInstance(new Locale("en", "IN"));
         this.percentFormat.setMinimumFractionDigits(2);
+        this.percentFormat.setMaximumFractionDigits(2);
 
         addClassName("st-page");
 
         Div titleGroup = new Div();
         titleGroup.addClassName("st-page-title-group");
-        H2 title = new H2("Portfolio");
+        H2 title = new H2("Portfolio & Holdings");
         title.addClassName("st-page-title");
-        Paragraph subtitle = new Paragraph("Track your holdings, investment value, and simulated trades.");
+        Paragraph subtitle = new Paragraph("Track position valuations, cost basis, unrealized returns and portfolio distribution.");
         subtitle.addClassName("st-page-subtitle");
         titleGroup.add(title, subtitle);
 
-        // === Stats row ===
+        // Stats row (6 metrics)
         Div statsRow = new Div();
         statsRow.addClassName("st-stats-row");
 
+        netWorthValue = new Span("-");
+        netWorthValue.addClassName("st-stat-value");
+        statsRow.add(createStatCard("Total Net Worth", netWorthValue, "Cash + Equity holdings"));
+
         cashValue = new Span("-");
         cashValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Available Cash", cashValue));
+        statsRow.add(createStatCard("Available Cash", cashValue, "Settled buying power"));
 
         investedValue = new Span("-");
         investedValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Total Invested", investedValue));
+        statsRow.add(createStatCard("Total Invested", investedValue, "Aggregate cost basis"));
 
         holdingsValue = new Span("-");
         holdingsValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Holdings Value", holdingsValue));
+        statsRow.add(createStatCard("Holdings Value", holdingsValue, "Current mark-to-market"));
 
-        netWorthValue = new Span("-");
-        netWorthValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Total Net Worth", netWorthValue));
+        unrealizedPnlValue = new Span("-");
+        unrealizedPnlValue.addClassName("st-stat-value");
+        statsRow.add(createStatCard("Unrealized P&L", unrealizedPnlValue, "Floating open returns"));
+
+        realizedPnlValue = new Span("-");
+        realizedPnlValue.addClassName("st-stat-value");
+        statsRow.add(createStatCard("Realized P&L", realizedPnlValue, "Settled closed trades"));
 
         Div headerContainer = new Div(titleGroup, statsRow);
         headerContainer.addClassName("st-header-container");
 
-        // === Holdings section ===
-        holdingsSection = new Div();
+        // Allocation Bar
+        allocationContainer = new Div();
+        allocationContainer.addClassName("st-allocation-container");
 
-        H3 sectionTitle = new H3("Your Holdings");
+        // Holdings section
+        holdingsSection = new Div();
+        H3 sectionTitle = new H3("Open Equity Positions");
         sectionTitle.addClassName("st-section-title");
-        Paragraph sectionSubtitle = new Paragraph("Stocks currently held in your portfolio.");
+        Paragraph sectionSubtitle = new Paragraph("Individual stocks currently held in your paper trading account.");
         sectionSubtitle.addClassName("st-section-subtitle");
         holdingsSection.add(sectionTitle, sectionSubtitle);
 
-        // === Grid ===
+        // Grid
         grid = new Grid<>(PortfolioService.HoldingRow.class, false);
         grid.setAllRowsVisible(true);
 
@@ -113,37 +131,56 @@ public class PortfolioView extends Div {
         }).setHeader("Symbol").setSortable(true).setAutoWidth(true);
 
         grid.addColumn(row -> row.companyName)
-                .setHeader("Company").setSortable(true).setAutoWidth(true).setFlexGrow(1);
-
-        grid.addColumn(row -> row.quantity)
-                .setHeader("Shares").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
-
-        grid.addColumn(row -> currencyFormat.format(row.avgBuyPrice))
-                .setHeader("Avg Cost").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
-
-        grid.addColumn(row -> currencyFormat.format(row.currentPrice))
-                .setHeader("Current Price").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
-
-        grid.addColumn(row -> currencyFormat.format(row.currentValue))
-                .setHeader("Market Value").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+                .setHeader("Company Name").setSortable(true).setAutoWidth(true).setFlexGrow(1);
 
         grid.addComponentColumn(row -> {
-            String pnlText = currencyFormat.format(row.unrealizedPnl) + " (" + percentFormat.format(row.unrealizedPct.doubleValue() / 100.0) + ")";
+            Span shares = new Span(String.valueOf(row.quantity));
+            shares.addClassName("tabular-num");
+            return shares;
+        }).setHeader("Shares").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(row -> {
+            Span avg = new Span(currencyFormat.format(row.avgBuyPrice));
+            avg.addClassName("tabular-num");
+            return avg;
+        }).setHeader("Avg Cost").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(row -> {
+            Span cur = new Span(currencyFormat.format(row.currentPrice));
+            cur.addClassName("tabular-num");
+            return cur;
+        }).setHeader("Current Price").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(row -> {
+            Span val = new Span(currencyFormat.format(row.currentValue));
+            val.addClassName("tabular-num");
+            val.getStyle().set("font-weight", "600");
+            return val;
+        }).setHeader("Market Value").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(row -> {
+            String pnlText = (row.unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "") +
+                    currencyFormat.format(row.unrealizedPnl) + " (" +
+                    (row.unrealizedPct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "") +
+                    percentFormat.format(row.unrealizedPct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)) + ")";
             Span pnlSpan = new Span(pnlText);
-            if (row.isPositive() && row.unrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
+            pnlSpan.addClassName("tabular-num");
+            if (row.unrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
                 pnlSpan.addClassName("st-positive");
             } else if (row.unrealizedPnl.compareTo(BigDecimal.ZERO) < 0) {
                 pnlSpan.addClassName("st-negative");
+            } else {
+                pnlSpan.getStyle().set("color", "var(--st-text-muted)");
             }
-            pnlSpan.getStyle().set("font-weight", "600").set("font-size", "13px");
+            pnlSpan.getStyle().set("font-weight", "600").set("font-size", "12px");
             return pnlSpan;
-        }).setHeader("Total Return").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+        }).setHeader("Unrealized Return").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(row -> {
             Button sellBtn = new Button("Sell");
             sellBtn.addClassNames("st-btn", "st-btn-sell");
             sellBtn.getElement().removeAttribute("theme");
-            sellBtn.getStyle().set("height", "32px").set("font-size", "13px").set("padding", "0 14px");
+            sellBtn.getStyle().set("height", "28px").set("font-size", "12px").set("padding", "0 12px");
             sellBtn.addClickListener(e -> openSellDialog(row));
             return sellBtn;
         }).setHeader("Action").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
@@ -151,22 +188,21 @@ public class PortfolioView extends Div {
         tableContainer = new Div(grid);
         tableContainer.addClassName("st-table-surface");
 
-        // === Empty state ===
+        // Empty state
         emptyState = new Div();
         emptyState.addClassName("st-empty-state");
         emptyState.setVisible(false);
-        emptyState.getStyle().set("background", "var(--st-bg-surface)").set("border", "1px solid var(--st-border)").set("border-radius", "var(--st-radius)");
 
-        Component walletIcon = createSvgIcon(SVG_WALLET, "48px");
+        Component walletIcon = createSvgIcon(SVG_WALLET, "40px");
         Div emptyTitle2 = new Div();
         emptyTitle2.addClassName("st-empty-title");
-        emptyTitle2.setText("Your portfolio is empty");
-        Paragraph emptyText = new Paragraph("Buy a stock from the Market page to start building your portfolio.");
+        emptyTitle2.setText("Your portfolio has no open positions");
+        Paragraph emptyText = new Paragraph("Select an equity from the Market Quotes page to place your first paper trade.");
         emptyText.addClassName("st-empty-text");
 
         RouterLink marketLink = new RouterLink();
         marketLink.setRoute(MarketView.class);
-        Button exploreBtn = new Button("Explore Market");
+        Button exploreBtn = new Button("Browse Market Quotes");
         exploreBtn.addClassNames("st-btn", "st-btn-primary");
         exploreBtn.getElement().removeAttribute("theme");
         marketLink.add(exploreBtn);
@@ -175,7 +211,7 @@ public class PortfolioView extends Div {
 
         holdingsSection.add(tableContainer, emptyState);
 
-        add(headerContainer, holdingsSection);
+        add(headerContainer, allocationContainer, holdingsSection);
         updateData();
     }
 
@@ -187,13 +223,20 @@ public class PortfolioView extends Div {
         return span;
     }
 
-    private Div createStatCard(String label, Span value) {
+    private Div createStatCard(String label, Span value, String subtext) {
         Div card = new Div();
         card.addClassName("st-stat-card");
-        Div labelDiv = new Div();
-        labelDiv.addClassName("st-stat-label");
-        labelDiv.setText(label);
-        card.add(labelDiv, value);
+
+        Div header = new Div();
+        header.addClassName("st-stat-header");
+        Span labelSpan = new Span(label);
+        labelSpan.addClassName("st-stat-label");
+        header.add(labelSpan);
+
+        Span sub = new Span(subtext);
+        sub.addClassName("st-stat-subtext");
+
+        card.add(header, value, sub);
         return card;
     }
 
@@ -205,10 +248,39 @@ public class PortfolioView extends Div {
             Portfolio portfolio = portfolioService.getPortfolioForUser(user.getId());
             PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(portfolio);
 
+            netWorthValue.setText(currencyFormat.format(summary.netWorth));
             cashValue.setText(currencyFormat.format(summary.cash));
             investedValue.setText(currencyFormat.format(summary.totalInvested));
             holdingsValue.setText(currencyFormat.format(summary.totalCurrentValue));
-            netWorthValue.setText(currencyFormat.format(summary.netWorth));
+
+            String unSign = summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+            unrealizedPnlValue.setText(unSign + currencyFormat.format(summary.totalUnrealizedPnl));
+            if (summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
+                unrealizedPnlValue.addClassName("st-positive");
+                unrealizedPnlValue.removeClassName("st-negative");
+            } else if (summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) < 0) {
+                unrealizedPnlValue.addClassName("st-negative");
+                unrealizedPnlValue.removeClassName("st-positive");
+            } else {
+                unrealizedPnlValue.removeClassName("st-positive");
+                unrealizedPnlValue.removeClassName("st-negative");
+            }
+
+            String reSign = summary.realizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+            realizedPnlValue.setText(reSign + currencyFormat.format(summary.realizedPnl));
+            if (summary.realizedPnl.compareTo(BigDecimal.ZERO) > 0) {
+                realizedPnlValue.addClassName("st-positive");
+                realizedPnlValue.removeClassName("st-negative");
+            } else if (summary.realizedPnl.compareTo(BigDecimal.ZERO) < 0) {
+                realizedPnlValue.addClassName("st-negative");
+                realizedPnlValue.removeClassName("st-positive");
+            } else {
+                realizedPnlValue.removeClassName("st-positive");
+                realizedPnlValue.removeClassName("st-negative");
+            }
+
+            // Update Allocation Bar
+            updateAllocationBar(summary);
 
             if (summary.rows.isEmpty()) {
                 tableContainer.setVisible(false);
@@ -225,6 +297,62 @@ public class PortfolioView extends Div {
         }
     }
 
+    private void updateAllocationBar(PortfolioService.PortfolioSummary summary) {
+        allocationContainer.removeAll();
+
+        HorizontalLayout top = new HorizontalLayout();
+        top.setWidthFull();
+        top.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+
+        Span title = new Span("Capital Allocation");
+        title.getStyle().set("font-size", "12px").set("font-weight", "600").set("text-transform", "uppercase").set("letter-spacing", "0.05em").set("color", "var(--st-text-secondary)");
+
+        BigDecimal total = summary.netWorth;
+        double cashPct = 100.0;
+        double equityPct = 0.0;
+
+        if (total.compareTo(BigDecimal.ZERO) > 0) {
+            cashPct = summary.cash.divide(total, 4, RoundingMode.HALF_UP).doubleValue() * 100.0;
+            equityPct = summary.totalCurrentValue.divide(total, 4, RoundingMode.HALF_UP).doubleValue() * 100.0;
+            if (cashPct > 100.0) cashPct = 100.0;
+            if (equityPct > 100.0) equityPct = 100.0;
+        }
+
+        Span ratioText = new Span(String.format(Locale.US, "Cash: %.1f%%  ·  Equity: %.1f%%", cashPct, equityPct));
+        ratioText.getStyle().set("font-size", "12px").set("color", "var(--st-text-muted)").set("font-feature-settings", "\"tnum\"");
+
+        top.add(title, ratioText);
+
+        Div bar = new Div();
+        bar.addClassName("st-allocation-bar");
+
+        Div cashSeg = new Div();
+        cashSeg.addClassName("st-allocation-cash");
+        cashSeg.getStyle().set("width", String.format(Locale.US, "%.1f%%", cashPct));
+
+        Div eqSeg = new Div();
+        eqSeg.addClassName("st-allocation-equity");
+        eqSeg.getStyle().set("width", String.format(Locale.US, "%.1f%%", equityPct));
+
+        bar.add(cashSeg, eqSeg);
+
+        Div legend = new Div();
+        legend.addClassName("st-allocation-legend");
+
+        Span cashDot = new Span();
+        cashDot.addClassName("st-legend-dot");
+        cashDot.getStyle().set("background-color", "var(--st-blue)");
+        Span cashLabel = new Span(cashDot, new Span("Cash Reserve (" + currencyFormat.format(summary.cash) + ")"));
+
+        Span eqDot = new Span();
+        eqDot.addClassName("st-legend-dot");
+        eqDot.getStyle().set("background-color", "var(--st-green)");
+        Span eqLabel = new Span(eqDot, new Span("Equity Allocation (" + currencyFormat.format(summary.totalCurrentValue) + ")"));
+
+        legend.add(cashLabel, eqLabel);
+        allocationContainer.add(top, bar, legend);
+    }
+
     private void openSellDialog(PortfolioService.HoldingRow row) {
         AuthUser user = securityService.getAuthenticatedUser();
         if (user == null) {
@@ -233,38 +361,37 @@ public class PortfolioView extends Div {
         }
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle("Sell Stock");
-        dialog.setWidth("400px");
+        dialog.setHeaderTitle("Sell Order · " + row.symbol);
+        dialog.setWidth("min(420px, 94vw)");
 
         VerticalLayout layout = new VerticalLayout();
         layout.setPadding(false);
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        Span symbolSpan = new Span(row.symbol);
-        symbolSpan.getStyle().set("font-size", "18px").set("font-weight", "600").set("color", "var(--st-text-primary)");
-
         Span companySpan = new Span(row.companyName);
-        companySpan.getStyle().set("font-size", "14px").set("color", "var(--st-text-secondary)").set("margin-bottom", "12px").set("display", "block");
+        companySpan.getStyle().set("font-size", "13px").set("color", "var(--st-text-secondary)").set("margin-bottom", "14px").set("display", "block");
 
-        // Info rows
+        // Available Shares
         Div sharesRow = new Div();
         sharesRow.addClassName("st-dialog-row");
-        Span sharesLabel = new Span("Available Shares");
+        Span sharesLabel = new Span("Held Shares");
         sharesLabel.addClassName("st-dialog-row-label");
         Span sharesVal = new Span(String.valueOf(row.quantity));
         sharesVal.addClassName("st-dialog-row-value");
         sharesRow.add(sharesLabel, sharesVal);
 
+        // Price Row
         Div priceRow = new Div();
         priceRow.addClassName("st-dialog-row");
-        Span priceLabel = new Span("Current Price");
+        Span priceLabel = new Span("Current Execution Price");
         priceLabel.addClassName("st-dialog-row-label");
         Span priceVal = new Span(currencyFormat.format(row.currentPrice));
         priceVal.addClassName("st-dialog-row-value");
         priceRow.add(priceLabel, priceVal);
 
-        IntegerField qtyField = new IntegerField("Quantity to Sell");
+        // Quantity Input
+        IntegerField qtyField = new IntegerField("Quantity to Sell (Shares)");
         qtyField.setMin(1);
         qtyField.setMax(row.quantity);
         qtyField.setStepButtonsVisible(true);
@@ -273,11 +400,12 @@ public class PortfolioView extends Div {
         qtyField.setWidthFull();
         qtyField.getStyle().set("margin-top", "12px");
 
+        // Estimated proceeds
         Div estDiv = new Div();
         estDiv.addClassName("st-dialog-estimate");
         Div estRow = new Div();
         estRow.addClassName("st-dialog-row");
-        Span estLabel = new Span("Estimated Proceeds");
+        Span estLabel = new Span("Estimated Gross Proceeds");
         estLabel.addClassName("st-dialog-row-label");
         Span estValue = new Span(currencyFormat.format(row.currentPrice));
         estValue.addClassName("st-dialog-row-value");
@@ -290,45 +418,47 @@ public class PortfolioView extends Div {
             }
         });
 
-        Span note = new Span("Final execution price is determined by the server.");
+        Span note = new Span("Proceeds will be credited to your available cash upon execution.");
         note.addClassName("st-dialog-note");
 
-        layout.add(symbolSpan, companySpan, sharesRow, priceRow, qtyField, estDiv, note);
+        layout.add(companySpan, sharesRow, priceRow, qtyField, estDiv, note);
         dialog.add(layout);
 
         Button cancelBtn = new Button("Cancel", e -> dialog.close());
         cancelBtn.addClassNames("st-btn", "st-btn-secondary");
         cancelBtn.getElement().removeAttribute("theme");
 
-        Button confirmBtn = new Button("Confirm Sell");
+        Button confirmBtn = new Button("Execute Sell");
         confirmBtn.addClassNames("st-btn", "st-btn-sell");
         confirmBtn.getElement().removeAttribute("theme");
 
         confirmBtn.addClickListener(e -> {
             Integer qty = qtyField.getValue();
             if (qty == null || qty < 1 || qty > row.quantity) {
-                Notification.show("Enter a valid quantity (1-" + row.quantity + ").", 3000, Notification.Position.MIDDLE)
+                Notification.show("Please enter a valid share quantity (1-" + row.quantity + ").", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
             confirmBtn.setEnabled(false);
-            confirmBtn.setText("Processing...");
+            confirmBtn.setText("Executing...");
 
             try {
                 Trade trade = tradingService.sell(user.getId(), row.stockId, qty);
-                Notification.show("Sold " + trade.getQuantity() + " shares of " + trade.getStockSymbol() + " for " + currencyFormat.format(trade.getTotalAmount()), 5000, Notification.Position.BOTTOM_CENTER)
+                Notification.show("Executed SELL: " + trade.getQuantity() + " shares of " + trade.getStockSymbol() +
+                                " at " + currencyFormat.format(trade.getPrice()) + " (Total: " + currencyFormat.format(trade.getTotalAmount()) + ")",
+                        5000, Notification.Position.BOTTOM_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 dialog.close();
                 updateData();
             } catch (AppException ex) {
-                Notification.show("Trade failed: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                Notification.show("Execution rejected: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } catch (Exception ex) {
-                Notification.show("An unexpected error occurred.", 5000, Notification.Position.MIDDLE)
+                Notification.show("Order processing error.", 5000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } finally {
                 confirmBtn.setEnabled(true);
-                confirmBtn.setText("Confirm Sell");
+                confirmBtn.setText("Execute Sell");
             }
         });
 

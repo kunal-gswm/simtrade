@@ -1,31 +1,71 @@
-/* ===== SimTrade Design Tokens ===== */
+/* ==========================================================================
+   SIMTRADE 2.0 — INSTITUTIONAL TERMINAL DESIGN SYSTEM
+   Neutral charcoal surfaces, restrained green/red financial indicators,
+   tabular numerals, high information density, dark terminal aesthetic.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ===== Core Institutional Design Tokens ===== */
 :root {
-  --st-bg-main: #F6F8FB;
-  --st-bg-surface: #FFFFFF;
-  --st-bg-surface-secondary: #F8FAFC;
-  --st-text-primary: #172B4D;
-  --st-text-secondary: #5E6C84;
-  --st-text-muted: #7A869A;
-  --st-border: #DFE5EE;
-  --st-hover-bg: #F1F5F9;
-  
-  --st-blue: #2563EB;
-  --st-blue-hover: #1D4ED8;
-  --st-blue-pressed: #1E40AF;
-  
-  --st-green: #15803D;
-  --st-green-bg: #DCFCE7;
-  
-  --st-red: #DC2626;
-  --st-red-bg: #FEE2E2;
-  
-  --st-focus: #93C5FD;
-  
-  --st-radius: 7px;
-  --st-radius-lg: 9px;
+  /* Surfaces & Canvas */
+  --st-bg-main: #0B0E14;              /* Deep obsidian canvas */
+  --st-bg-surface: #131722;           /* Primary graphite slate panel */
+  --st-bg-surface-secondary: #1A1F2C; /* Secondary elevated slate */
+  --st-bg-surface-tertiary: #202636;  /* High elevation / dialogs */
+  --st-bg-hover: #1E2433;             /* Subtle row/button hover */
+  --st-bg-active: #283042;            /* Pressed state */
+
+  /* Borders & Dividers */
+  --st-border: #2A2E39;               /* Primary 1px structural border */
+  --st-border-subtle: #1F232E;        /* Subtle row divider */
+  --st-border-bright: #363C4E;        /* Highlight border */
+
+  /* Typography Colors */
+  --st-text-primary: #E6EDF3;         /* Crisp off-white (high contrast) */
+  --st-text-secondary: #8B949E;       /* Slate muted for labels and meta */
+  --st-text-muted: #6E7681;           /* Deeper muted */
+  --st-text-dim: #484F58;             /* Subtle guides */
+
+  /* Brand / Action Colors */
+  --st-blue: #2962FF;                 /* Institutional terminal blue */
+  --st-blue-hover: #1E53E5;
+  --st-blue-pressed: #1844BC;
+  --st-blue-bg: rgba(41, 98, 255, 0.12);
+  --st-blue-border: rgba(41, 98, 255, 0.35);
+
+  /* Financial Indicators: Restrained Institutional Greens & Reds */
+  --st-green: #089981;                /* Institutional teal-green */
+  --st-green-hover: #067A67;
+  --st-green-bg: rgba(8, 153, 129, 0.12);
+  --st-green-border: rgba(8, 153, 129, 0.32);
+
+  --st-red: #F23645;                  /* Institutional berry/crimson */
+  --st-red-hover: #D62A38;
+  --st-red-bg: rgba(242, 54, 69, 0.12);
+  --st-red-border: rgba(242, 54, 69, 0.32);
+
+  --st-amber: #D97706;                /* Restrained warning amber */
+  --st-amber-bg: rgba(217, 119, 6, 0.12);
+
+  --st-focus: rgba(41, 98, 255, 0.45);
+
+  /* Geometry & Typography */
+  --st-radius-sm: 3px;
+  --st-radius: 4px;                   /* Crisp institutional radius */
+  --st-radius-lg: 6px;
   --st-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  --st-transition: 150ms ease;
+  --st-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Menlo, monospace;
+  --st-transition: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Compatibility Aliases for Admin / Legacy Views */
+  --st-text-main: var(--st-text-primary);
+  --st-primary-color: var(--st-blue);
+  --st-danger-color: var(--st-red);
+  --st-success-color: var(--st-green);
+  --st-border-color: var(--st-border);
+  --st-bg-color: var(--st-bg-main);
+  --st-hover-bg: var(--st-bg-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -34,120 +74,204 @@
   }
 }
 
-/* ===== Import Inter font ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-/* ===== Global resets ===== */
+/* ===== Vaadin Lumo Overrides (Dark Institutional Base) ===== */
 html {
   --lumo-font-family: var(--st-font);
+  --lumo-base-color: var(--st-bg-surface);
+  --lumo-body-text-color: var(--st-text-primary);
+  --lumo-header-text-color: var(--st-text-primary);
+  --lumo-secondary-text-color: var(--st-text-secondary);
+
   --lumo-primary-color: var(--st-blue);
   --lumo-primary-text-color: var(--st-blue);
   --lumo-success-color: var(--st-green);
   --lumo-success-text-color: var(--st-green);
   --lumo-error-color: var(--st-red);
   --lumo-error-text-color: var(--st-red);
-  --lumo-body-text-color: var(--st-text-primary);
-  --lumo-secondary-text-color: var(--st-text-secondary);
+
+  --lumo-contrast-5pct: var(--st-bg-surface-secondary);
   --lumo-contrast-10pct: var(--st-border);
+  --lumo-contrast-20pct: var(--st-border-bright);
+  --lumo-contrast-30pct: #4A5060;
+  --lumo-contrast-90pct: var(--st-text-primary);
+
+  --lumo-border-radius-s: var(--st-radius-sm);
   --lumo-border-radius-m: var(--st-radius);
-  --lumo-size-m: 42px;
-  --lumo-size-l: 44px;
+  --lumo-border-radius-l: var(--st-radius-lg);
+
+  --lumo-size-m: 36px;
+  --lumo-size-l: 40px;
+  background-color: var(--st-bg-main);
+  color: var(--st-text-primary);
 }
 
-/* ===== AppLayout shell ===== */
+/* ===== Tabular Figures for Numbers & Financials ===== */
+.tabular-num,
+.st-num,
+.st-stat-value,
+vaadin-grid,
+.st-dialog-row-value,
+.st-symbol {
+  font-feature-settings: "tnum" 1, "cv05" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Vaadin AppLayout Shell ===== */
 vaadin-app-layout {
-  --vaadin-app-layout-drawer-offset-size: 224px;
+  --vaadin-app-layout-drawer-offset-size: 240px;
+  background-color: var(--st-bg-main);
 }
 
 vaadin-app-layout::part(navbar) {
-  height: 64px;
-  min-height: 64px;
+  height: 56px;
+  min-height: 56px;
   border-bottom: 1px solid var(--st-border);
   box-shadow: none;
   background: var(--st-bg-surface);
+  padding: 0 16px;
 }
 
 vaadin-app-layout::part(drawer) {
-  width: 224px;
+  width: 240px;
   background: var(--st-bg-surface);
   border-right: 1px solid var(--st-border);
   padding-top: 0;
+  box-shadow: none;
 }
 
 vaadin-app-layout [slot="drawer"] {
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-/* ===== Drawer nav brand ===== */
+/* ===== Drawer Brand Header ===== */
 .st-drawer-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  gap: 10px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--st-border);
-  min-height: 64px;
+  min-height: 56px;
   box-sizing: border-box;
 }
 .st-drawer-brand svg {
   color: var(--st-blue);
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 .st-drawer-brand .st-brand-text {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--st-text-primary);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.st-brand-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-blue);
+  background: var(--st-blue-bg);
+  border: 1px solid var(--st-blue-border);
+  padding: 1px 5px;
+  border-radius: 2px;
 }
 
-/* ===== Drawer nav links ===== */
+/* ===== Drawer Nav Links ===== */
+.st-nav-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-text-muted);
+  padding: 16px 20px 6px;
+}
 .st-nav-link {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 0 20px;
-  height: 48px;
+  height: 40px;
   text-decoration: none !important;
   color: var(--st-text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  border-left: 3px solid transparent;
+  border-left: 2px solid transparent;
   transition: background-color var(--st-transition), color var(--st-transition), border-color var(--st-transition);
   cursor: pointer;
 }
 .st-nav-link:hover {
-  background-color: var(--st-hover-bg);
+  background-color: var(--st-bg-hover);
   color: var(--st-text-primary);
 }
 .st-nav-link:active {
-  background-color: var(--st-border);
+  background-color: var(--st-bg-active);
 }
 .st-nav-link:focus-visible {
   outline: 2px solid var(--st-focus);
   outline-offset: -2px;
 }
 .st-nav-link.active {
-  color: var(--st-blue);
-  background-color: rgba(37, 99, 235, 0.05);
+  color: var(--st-text-primary);
+  background-color: rgba(41, 98, 255, 0.08);
   border-left-color: var(--st-blue);
   font-weight: 600;
 }
 .st-nav-link svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   color: inherit;
 }
 
-/* ===== Navbar header ===== */
+/* Drawer footer for system version */
+.st-drawer-footer {
+  margin-top: auto;
+  padding: 14px 20px;
+  border-top: 1px solid var(--st-border);
+  font-size: 11px;
+  color: var(--st-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ===== Navbar Header ===== */
 .st-navbar {
   display: flex;
   align-items: center;
   width: 100%;
   height: 100%;
-  padding: 0 24px 0 0;
-  gap: 12px;
+  gap: 14px;
 }
+.st-navbar-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--st-text-secondary);
+  margin-left: 12px;
+}
+.st-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--st-green);
+  box-shadow: 0 0 0 2px rgba(8, 153, 129, 0.25);
+  animation: st-pulse 2s infinite ease-in-out;
+}
+@keyframes st-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(8, 153, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0); }
+}
+
 .st-navbar-user {
   margin-left: auto;
   display: flex;
@@ -155,63 +279,69 @@ vaadin-app-layout [slot="drawer"] {
   gap: 12px;
 }
 .st-navbar-username {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--st-text-primary);
-  font-weight: 500;
+  font-weight: 600;
 }
 .st-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--st-blue);
-  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--st-bg-surface-secondary);
+  border: 1px solid var(--st-border);
+  color: var(--st-text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
 }
 .st-navbar-logout {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
   cursor: pointer;
-  background: var(--st-bg-surface);
+  background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
   font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 5px 10px;
+  border-radius: var(--st-radius);
   transition: background var(--st-transition), color var(--st-transition), border-color var(--st-transition);
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 28px;
 }
 .st-navbar-logout:hover {
-  background: var(--st-hover-bg);
+  background: var(--st-bg-hover);
   color: var(--st-text-primary);
-  border-color: #cbd5e1;
+  border-color: var(--st-border-bright);
 }
 .st-navbar-logout svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
-/* ===== Page content wrapper ===== */
+/* ===== Page Content Wrapper ===== */
 .st-page {
   background: var(--st-bg-main);
-  padding: 24px;
+  padding: 20px 24px;
   min-height: 100%;
+  box-sizing: border-box;
+  color: var(--st-text-primary);
 }
 @media (max-width: 768px) {
-  .st-page { padding: 16px; }
+  .st-page { padding: 14px 16px; }
 }
 
 .st-header-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 16px;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--st-border-subtle);
 }
 
 .st-page-title-group {
@@ -219,66 +349,92 @@ vaadin-app-layout [slot="drawer"] {
   flex-direction: column;
 }
 
-/* ===== Page header ===== */
 .st-page-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .st-page-title {
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--st-text-primary);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
 }
 .st-page-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--st-text-secondary);
   margin: 4px 0 0 0;
 }
 
-/* ===== Stat cards ===== */
+/* ===== Stat / KPI Cards (Institutional Density) ===== */
 .st-stats-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
 }
 .st-stat-card {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius-lg);
-  padding: 16px;
-  width: 200px;
-  flex: 0 0 auto;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  min-height: 78px;
+  box-sizing: border-box;
+  transition: border-color var(--st-transition);
 }
-.st-stat-label {
-  font-size: 13px;
-  color: var(--st-text-secondary);
-  font-weight: 500;
+.st-stat-card:hover {
+  border-color: var(--st-border-bright);
+}
+.st-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 6px;
 }
-.st-stat-value {
-  font-size: 22px;
+.st-stat-label {
+  font-size: 11px;
+  color: var(--st-text-secondary);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+.st-stat-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--st-text-muted);
+}
+.st-stat-value {
+  font-size: 20px;
+  font-weight: 700;
   color: var(--st-text-primary);
+  line-height: 1.2;
+}
+.st-stat-subtext {
+  font-size: 11px;
+  color: var(--st-text-muted);
+  margin-top: 4px;
 }
 
-/* ===== Section headers ===== */
+/* ===== Section Headers ===== */
 .st-section-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--st-text-primary);
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.2px;
 }
 .st-section-subtitle {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--st-text-secondary);
-  margin: 0 0 16px 0;
+  margin: 0 0 14px 0;
 }
 
-/* ===== Table container ===== */
+/* ===== Table Surface & Vaadin Grid ===== */
 .st-table-surface {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
@@ -286,56 +442,63 @@ vaadin-app-layout [slot="drawer"] {
   overflow: hidden;
 }
 
-/* ===== Grid styling ===== */
 vaadin-grid {
   --lumo-base-color: var(--st-bg-surface);
-  font-size: 14px;
-  border: none !important;
-}
-vaadin-grid::part(header-cell) {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--st-text-secondary);
+  border: none !important;
   background: var(--st-bg-surface);
-  border-bottom: 1px solid var(--st-border);
-  padding: 12px 16px;
-}
-vaadin-grid::part(body-cell) {
-  font-size: 14px;
-  color: var(--st-text-primary);
-  min-height: 52px;
-  border-bottom: 1px solid #f1f5f9;
-  padding: 0 16px;
-}
-/* Ensure cell contents, particularly buttons, are not clipped */
-vaadin-grid::part(body-cell)::-webkit-scrollbar {
-  display: none; /* Hide scrollbars if they appear */
-}
-vaadin-grid::part(row):hover {
-  background: var(--st-hover-bg);
 }
 
-/* ===== Buttons ===== */
+vaadin-grid::part(header-cell) {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--st-text-secondary);
+  background: var(--st-bg-surface-secondary);
+  border-bottom: 1px solid var(--st-border);
+  padding: 10px 14px;
+  min-height: 38px;
+}
+
+vaadin-grid::part(body-cell) {
+  font-size: 13px;
+  color: var(--st-text-primary);
+  min-height: 44px;
+  border-bottom: 1px solid var(--st-border-subtle);
+  padding: 0 14px;
+}
+
+vaadin-grid::part(row):hover {
+  background: var(--st-bg-hover);
+}
+
+vaadin-grid::part(body-cell)::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== Buttons (Clean, Restrained) ===== */
 .st-btn {
   border: none;
   border-radius: var(--st-radius);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  padding: 0 16px;
-  height: 40px;
-  line-height: 40px;
+  padding: 0 14px;
+  height: 34px;
+  line-height: 34px;
   transition: background var(--st-transition), color var(--st-transition), border-color var(--st-transition), opacity var(--st-transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: none;
 }
 .st-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 .st-btn:focus-visible {
@@ -345,137 +508,157 @@ vaadin-grid::part(row):hover {
 
 .st-btn-primary {
   background: var(--st-blue);
-  color: #fff;
+  color: #FFFFFF;
 }
 .st-btn-primary:hover:not(:disabled) { background: var(--st-blue-hover); }
 .st-btn-primary:active:not(:disabled) { background: var(--st-blue-pressed); }
 
 .st-btn-buy {
   background: var(--st-green);
-  color: #fff;
+  color: #FFFFFF;
+  font-weight: 600;
 }
-.st-btn-buy:hover:not(:disabled) { background: #166534; }
-.st-btn-buy:active:not(:disabled) { background: #14532d; }
+.st-btn-buy:hover:not(:disabled) { background: var(--st-green-hover); }
+.st-btn-buy:active:not(:disabled) { background: #056656; }
 
 .st-btn-sell {
   background: var(--st-red);
-  color: #fff;
+  color: #FFFFFF;
+  font-weight: 600;
 }
-.st-btn-sell:hover:not(:disabled) { background: #b91c1c; }
-.st-btn-sell:active:not(:disabled) { background: #991b1b; }
+.st-btn-sell:hover:not(:disabled) { background: var(--st-red-hover); }
+.st-btn-sell:active:not(:disabled) { background: #B9202D; }
 
 .st-btn-secondary {
-  background: var(--st-bg-surface);
+  background: var(--st-bg-surface-secondary);
   color: var(--st-text-primary);
   border: 1px solid var(--st-border);
 }
-.st-btn-secondary:hover:not(:disabled) { background: var(--st-hover-bg); }
-.st-btn-secondary:active:not(:disabled) { background: #e2e8f0; }
+.st-btn-secondary:hover:not(:disabled) {
+  background: var(--st-bg-hover);
+  border-color: var(--st-border-bright);
+}
+.st-btn-secondary:active:not(:disabled) {
+  background: var(--st-bg-active);
+}
 
 .st-btn-text {
   background: transparent;
   color: var(--st-text-secondary);
-  height: 32px;
-  line-height: 32px;
+  height: 30px;
+  line-height: 30px;
   padding: 0 8px;
 }
 .st-btn-text:hover:not(:disabled) {
   color: var(--st-text-primary);
-  background: var(--st-hover-bg);
+  background: var(--st-bg-hover);
 }
 
-/* ===== Trade type badges ===== */
+/* ===== Badges & Pills ===== */
 .st-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: var(--st-radius-sm);
+  line-height: 1.4;
 }
 .st-badge-buy {
   background: var(--st-green-bg);
   color: var(--st-green);
+  border: 1px solid var(--st-green-border);
 }
 .st-badge-sell {
   background: var(--st-red-bg);
   color: var(--st-red);
+  border: 1px solid var(--st-red-border);
 }
 .st-badge-sector {
   color: var(--st-text-secondary);
-  font-size: 13px;
-  font-weight: 400;
+  background: var(--st-bg-surface-secondary);
+  border: 1px solid var(--st-border);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--st-radius-sm);
 }
 
-/* ===== Positive / Negative values ===== */
-.st-positive { color: var(--st-green) !important; font-weight: 500; }
-.st-negative { color: var(--st-red) !important; font-weight: 500; }
-
-/* ===== Empty state ===== */
-.st-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px 24px;
-  text-align: center;
-}
-.st-empty-state svg {
-  width: 48px;
-  height: 48px;
-  color: var(--st-text-muted);
-  margin-bottom: 16px;
-}
-.st-empty-title {
-  font-size: 18px;
+/* ===== Positive / Negative Numbers ===== */
+.st-positive {
+  color: var(--st-green) !important;
   font-weight: 600;
-  color: var(--st-text-primary);
-  margin: 0 0 8px 0;
 }
-.st-empty-text {
-  font-size: 14px;
-  color: var(--st-text-secondary);
-  margin: 0 0 24px 0;
-  max-width: 400px;
-  line-height: 1.5;
+.st-negative {
+  color: var(--st-red) !important;
+  font-weight: 600;
 }
 
-/* ===== Search field ===== */
+/* ===== Symbol Presentation ===== */
+.st-symbol {
+  font-weight: 700;
+  color: var(--st-text-primary);
+  font-size: 13px;
+  letter-spacing: -0.1px;
+}
+
+/* ===== Search & Filter Controls ===== */
 .st-search-field {
-  width: 320px;
+  width: 280px;
   max-width: 100%;
 }
 .st-search-field::part(input-field) {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius);
-  height: 40px;
+  height: 36px;
+  color: var(--st-text-primary);
 }
 .st-search-field::part(input-field):focus-within {
-  border-color: var(--st-focus);
-  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+  border-color: var(--st-blue);
+  box-shadow: 0 0 0 2px var(--st-focus);
 }
 
-/* ===== Dialog ===== */
+/* ===== Dialog Overlays ===== */
 vaadin-dialog-overlay::part(overlay) {
   border-radius: var(--st-radius-lg);
   background: var(--st-bg-surface);
+  border: 1px solid var(--st-border);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  color: var(--st-text-primary);
 }
+vaadin-dialog-overlay::part(header) {
+  border-bottom: 1px solid var(--st-border);
+  padding: 14px 20px;
+}
+vaadin-dialog-overlay::part(title) {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--st-text-primary);
+}
+vaadin-dialog-overlay::part(footer) {
+  border-top: 1px solid var(--st-border);
+  padding: 12px 20px;
+  background: var(--st-bg-surface-secondary);
+}
+
 .st-dialog-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 0;
   width: 100%;
   box-sizing: border-box;
 }
 .st-dialog-row-label {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--st-text-secondary);
   font-weight: 500;
 }
 .st-dialog-row-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--st-text-primary);
 }
@@ -483,29 +666,59 @@ vaadin-dialog-overlay::part(overlay) {
   background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius);
-  padding: 16px;
-  margin-top: 20px;
+  padding: 12px 14px;
+  margin-top: 14px;
   width: 100%;
   box-sizing: border-box;
 }
 .st-dialog-estimate .st-dialog-row {
-  padding: 0;
+  padding: 2px 0;
 }
 .st-dialog-note {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--st-text-muted);
   margin-top: 8px;
+  display: block;
 }
 
-/* ===== Login page ===== */
+/* ===== Empty State ===== */
+.st-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+.st-empty-state svg {
+  width: 40px;
+  height: 40px;
+  color: var(--st-text-muted);
+  margin-bottom: 12px;
+}
+.st-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--st-text-primary);
+  margin: 0 0 6px 0;
+}
+.st-empty-text {
+  font-size: 13px;
+  color: var(--st-text-secondary);
+  margin: 0 0 20px 0;
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+/* ===== Login & Register Pages ===== */
 .st-login-page {
   display: flex;
   min-height: 100vh;
   background: var(--st-bg-main);
 }
 .st-login-brand-panel {
-  flex: 1;
-  background: var(--st-bg-surface-secondary);
+  flex: 1.1;
+  background: radial-gradient(circle at top left, #1A2030, #0B0E14);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -520,33 +733,52 @@ vaadin-dialog-overlay::part(overlay) {
   margin-bottom: 32px;
 }
 .st-login-brand-logo svg {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   color: var(--st-blue);
 }
 .st-login-brand-name {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--st-text-primary);
   letter-spacing: -0.3px;
 }
 .st-login-brand-heading {
-  font-size: 32px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
   color: var(--st-text-primary);
   line-height: 1.3;
-  margin: 0 0 16px 0;
-  max-width: 400px;
+  margin: 0 0 14px 0;
+  max-width: 420px;
+  letter-spacing: -0.4px;
 }
 .st-login-brand-text {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--st-text-secondary);
   line-height: 1.6;
-  max-width: 400px;
+  max-width: 420px;
+}
+.st-login-feature-list {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.st-login-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--st-text-secondary);
+}
+.st-login-feature-item svg {
+  color: var(--st-green);
+  width: 16px;
+  height: 16px;
 }
 
 .st-login-form-panel {
-  flex: 1;
+  flex: 0.9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -555,28 +787,115 @@ vaadin-dialog-overlay::part(overlay) {
 }
 .st-login-form-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius-lg);
   padding: 32px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .st-login-form-title {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--st-text-primary);
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.2px;
 }
 .st-login-form-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--st-text-secondary);
-  margin: 0 0 32px 0;
+  margin: 0 0 24px 0;
 }
 .st-login-footer {
   text-align: center;
-  font-size: 13px;
-  color: var(--st-text-secondary);
+  font-size: 11px;
+  color: var(--st-text-muted);
   margin-top: 24px;
+}
+
+/* ===== Form Controls & TextFields ===== */
+vaadin-text-field::part(input-field),
+vaadin-password-field::part(input-field),
+vaadin-email-field::part(input-field),
+vaadin-integer-field::part(input-field),
+vaadin-big-decimal-field::part(input-field),
+vaadin-text-area::part(input-field),
+vaadin-combo-box::part(input-field) {
+  background: var(--st-bg-surface-secondary);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius);
+  color: var(--st-text-primary);
+}
+
+vaadin-text-field::part(input-field):focus-within,
+vaadin-password-field::part(input-field):focus-within,
+vaadin-email-field::part(input-field):focus-within,
+vaadin-integer-field::part(input-field):focus-within,
+vaadin-big-decimal-field::part(input-field):focus-within,
+vaadin-text-area::part(input-field):focus-within,
+vaadin-combo-box::part(input-field):focus-within {
+  border-color: var(--st-blue);
+  box-shadow: 0 0 0 2px var(--st-focus);
+}
+
+vaadin-text-field::part(label),
+vaadin-password-field::part(label),
+vaadin-email-field::part(label),
+vaadin-integer-field::part(label),
+vaadin-big-decimal-field::part(label),
+vaadin-text-area::part(label),
+vaadin-combo-box::part(label) {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-text-secondary);
+}
+
+/* ===== Allocation Bar (Portfolio) ===== */
+.st-allocation-container {
+  background: var(--st-bg-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+.st-allocation-bar {
+  display: flex;
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--st-bg-surface-secondary);
+  margin: 10px 0;
+}
+.st-allocation-cash {
+  background: var(--st-blue);
+  height: 100%;
+  transition: width var(--st-transition);
+}
+.st-allocation-equity {
+  background: var(--st-green);
+  height: 100%;
+  transition: width var(--st-transition);
+}
+.st-allocation-legend {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: var(--st-text-secondary);
+}
+.st-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* ===== Responsive Breakpoint Rules ===== */
+@media (max-width: 1024px) {
+  .st-stats-row {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -584,9 +903,24 @@ vaadin-dialog-overlay::part(overlay) {
   .st-login-form-panel { padding: 24px; }
 }
 
-/* ===== Symbol column bold ===== */
-.st-symbol {
-  font-weight: 600;
-  color: var(--st-text-primary);
-  font-size: 14px;
+@media (max-width: 768px) {
+  .st-stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .st-header-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 390px) {
+  .st-stats-row {
+    grid-template-columns: 1fr;
+  }
+  .st-page {
+    padding: 12px;
+  }
+  vaadin-dialog-overlay::part(overlay) {
+    width: 95vw !important;
+  }
 }

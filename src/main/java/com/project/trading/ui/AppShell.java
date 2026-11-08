@@ -7,7 +7,7 @@ import com.vaadin.flow.theme.Theme;
 import com.vaadin.flow.theme.lumo.Lumo;
 
 @Push
-@Theme(themeClass = Lumo.class, variant = Lumo.LIGHT)
+@Theme(themeClass = Lumo.class, variant = Lumo.DARK)
 @CssImport("./styles/simtrade.css")
 public class AppShell implements AppShellConfigurator {
 }

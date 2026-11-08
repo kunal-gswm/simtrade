@@ -5,6 +5,7 @@ import com.project.trading.model.Stock;
 import com.project.trading.service.StockService;
 import com.project.trading.simulator.PriceSimulator;
 import com.project.trading.util.FaultInjector;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Div;
@@ -22,7 +23,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinServlet;
 
 @Route(value = "admin/tools", layout = AdminLayout.class)
-@PageTitle("Simulator & Tools | Admin")
+@PageTitle("Simulator & Testing Tools | SimTrade Admin")
 public class AdminToolsView extends VerticalLayout {
 
     private final StockService stockService = new StockService();
@@ -35,12 +36,25 @@ public class AdminToolsView extends VerticalLayout {
     private Button toggleFaultBtn;
 
     public AdminToolsView() {
+        addClassName("st-page");
         setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        setPadding(false);
+        setSpacing(false);
 
-        H1 title = new H1("Simulator & Testing Tools");
-        title.getStyle().set("margin-top", "0").set("color", "var(--st-text-main)");
+        Div headerContainer = new Div();
+        headerContainer.addClassName("st-header-container");
+
+        Div titleGroup = new Div();
+        titleGroup.addClassName("st-page-title-group");
+
+        H1 title = new H1("Simulation Engine & Diagnostic Controls");
+        title.addClassName("st-page-title");
+        Paragraph subtitle = new Paragraph("Configure the stochastic price generator, inject transactional faults, and apply manual market overrides.");
+        subtitle.addClassName("st-page-subtitle");
+
+        titleGroup.add(title, subtitle);
+        headerContainer.add(titleGroup);
+        add(headerContainer);
 
         // Fetch Simulator instance from ServletContext
         Object attr = VaadinServlet.getCurrent().getServletContext().getAttribute(AppContextListener.SIMULATOR_ATTR);
@@ -48,49 +62,47 @@ public class AdminToolsView extends VerticalLayout {
             this.priceSimulator = (PriceSimulator) attr;
         }
 
-        add(title);
-        
         HorizontalLayout topSection = new HorizontalLayout();
         topSection.setWidthFull();
         topSection.setSpacing(true);
-        
+        topSection.getStyle().set("flex-wrap", "wrap");
+
         topSection.add(createSimulatorSection(), createFaultInjectorSection());
         add(topSection);
-        
+
         add(createManualPriceSection());
     }
 
-    private com.vaadin.flow.component.Component createSimulatorSection() {
+    private Component createSimulatorSection() {
         Div section = new Div();
-        section.setWidth("100%");
-        section.getStyle()
-                .set("background", "#ffffff")
-                .set("border", "1px solid var(--st-border-color)")
-                .set("border-radius", "8px")
-                .set("padding", "20px");
+        section.addClassName("st-table-surface");
+        section.getStyle().set("padding", "20px").set("flex", "1").set("min-width", "300px").set("box-sizing", "border-box");
 
-        H2 header = new H2("Background Price Simulator");
-        header.getStyle().set("font-size", "1.2rem").set("margin-top", "0");
-        
-        Paragraph desc = new Paragraph("A background thread that randomly fluctuates active stock prices every 5 seconds.");
-        desc.getStyle().set("color", "var(--st-text-muted)").set("margin-top", "0");
+        H2 header = new H2("Stochastic Price Simulator");
+        header.addClassName("st-section-title");
+
+        Paragraph desc = new Paragraph("Background daemon worker that introduces random fractional market movement across active equities every 5 seconds.");
+        desc.getStyle().set("color", "var(--st-text-secondary)").set("font-size", "13px").set("line-height", "1.5");
 
         simulatorStatus = new Span();
-        simulatorStatus.getStyle().set("padding", "4px 8px").set("border-radius", "4px").set("font-weight", "bold");
-        
+        simulatorStatus.addClassName("st-badge");
+
         toggleSimulatorBtn = new Button();
+        toggleSimulatorBtn.addClassNames("st-btn");
+        toggleSimulatorBtn.getElement().removeAttribute("theme");
+
         toggleSimulatorBtn.addClickListener(e -> {
             if (priceSimulator != null) {
                 if (priceSimulator.isRunning()) {
                     priceSimulator.stop();
-                    showSuccess("Simulator stopped.");
+                    showSuccess("Price simulator daemon stopped.");
                 } else {
                     priceSimulator.start(5);
-                    showSuccess("Simulator started.");
+                    showSuccess("Price simulator daemon started.");
                 }
                 updateSimulatorUI();
             } else {
-                showError("Simulator instance not found.");
+                showError("Price simulator instance not found in ServletContext.");
             }
         });
 
@@ -98,7 +110,7 @@ public class AdminToolsView extends VerticalLayout {
 
         HorizontalLayout controls = new HorizontalLayout(simulatorStatus, toggleSimulatorBtn);
         controls.setAlignItems(Alignment.CENTER);
-        controls.getStyle().set("margin-top", "16px");
+        controls.getStyle().set("margin-top", "16px").set("gap", "12px");
 
         section.add(header, desc, controls);
         return section;
@@ -106,43 +118,52 @@ public class AdminToolsView extends VerticalLayout {
 
     private void updateSimulatorUI() {
         if (priceSimulator != null && priceSimulator.isRunning()) {
-            simulatorStatus.setText("RUNNING");
-            simulatorStatus.getStyle().set("background", "rgba(16, 185, 129, 0.1)").set("color", "var(--st-success-color)");
-            toggleSimulatorBtn.setText("Stop Simulator");
-            toggleSimulatorBtn.getStyle().set("background", "var(--st-danger-color)").set("color", "white");
+            simulatorStatus.setText("SIMULATOR ACTIVE");
+            simulatorStatus.removeClassName("st-badge-sell");
+            simulatorStatus.addClassName("st-badge-buy");
+            toggleSimulatorBtn.setText("Stop Simulation");
+            toggleSimulatorBtn.removeClassName("st-btn-buy");
+            toggleSimulatorBtn.addClassName("st-btn-sell");
         } else {
-            simulatorStatus.setText("STOPPED");
-            simulatorStatus.getStyle().set("background", "rgba(239, 68, 68, 0.1)").set("color", "var(--st-danger-color)");
-            toggleSimulatorBtn.setText("Start Simulator");
-            toggleSimulatorBtn.getStyle().set("background", "var(--st-success-color)").set("color", "white");
+            simulatorStatus.setText("SIMULATOR STOPPED");
+            simulatorStatus.removeClassName("st-badge-buy");
+            simulatorStatus.addClassName("st-badge-sell");
+            toggleSimulatorBtn.setText("Start Simulation");
+            toggleSimulatorBtn.removeClassName("st-btn-sell");
+            toggleSimulatorBtn.addClassName("st-btn-buy");
         }
     }
 
-    private com.vaadin.flow.component.Component createFaultInjectorSection() {
+    private Component createFaultInjectorSection() {
         Div section = new Div();
-        section.setWidth("100%");
+        section.addClassName("st-table-surface");
         section.getStyle()
-                .set("background", "#fff0f0")
-                .set("border", "1px solid var(--st-danger-color)")
-                .set("border-radius", "8px")
-                .set("padding", "20px");
+                .set("padding", "20px")
+                .set("flex", "1")
+                .set("min-width", "300px")
+                .set("border-color", "rgba(242, 54, 69, 0.4)")
+                .set("box-sizing", "border-box");
 
-        H2 header = new H2("DEMO TOOL: Fault Injection");
-        header.getStyle().set("font-size", "1.2rem").set("margin-top", "0").set("color", "var(--st-danger-color)");
-        
-        Paragraph desc = new Paragraph("Forces a RuntimeException mid-trade to demonstrate database transaction rollback (cash and holdings will not be saved).");
-        desc.getStyle().set("color", "var(--st-text-muted)").set("margin-top", "0");
+        H2 header = new H2("ACID Rollback Diagnostic (Fault Injection)");
+        header.addClassName("st-section-title");
+        header.getStyle().set("color", "var(--st-red)");
+
+        Paragraph desc = new Paragraph("Forces a synthetic RuntimeException mid-trade to verify transactional rollback integrity across cash balances and portfolio share allocations.");
+        desc.getStyle().set("color", "var(--st-text-secondary)").set("font-size", "13px").set("line-height", "1.5");
 
         faultStatus = new Span();
-        faultStatus.getStyle().set("padding", "4px 8px").set("border-radius", "4px").set("font-weight", "bold");
+        faultStatus.addClassName("st-badge");
 
         toggleFaultBtn = new Button();
+        toggleFaultBtn.addClassNames("st-btn");
+        toggleFaultBtn.getElement().removeAttribute("theme");
+
         toggleFaultBtn.addClickListener(e -> {
             FaultInjector.failMidTrade = !FaultInjector.failMidTrade;
             if (FaultInjector.failMidTrade) {
-                showError("Fault Injector is now ACTIVE! Trades will fail.");
+                showError("Fault Injector ACTIVE: Next simulated trade will intentionally fail and roll back.");
             } else {
-                showSuccess("Fault Injector deactivated.");
+                showSuccess("Fault Injector deactivated. Trades will settle normally.");
             }
             updateFaultUI();
         });
@@ -151,7 +172,7 @@ public class AdminToolsView extends VerticalLayout {
 
         HorizontalLayout controls = new HorizontalLayout(faultStatus, toggleFaultBtn);
         controls.setAlignItems(Alignment.CENTER);
-        controls.getStyle().set("margin-top", "16px");
+        controls.getStyle().set("margin-top", "16px").set("gap", "12px");
 
         section.add(header, desc, controls);
         return section;
@@ -159,39 +180,41 @@ public class AdminToolsView extends VerticalLayout {
 
     private void updateFaultUI() {
         if (FaultInjector.failMidTrade) {
-            faultStatus.setText("ACTIVE");
-            faultStatus.getStyle().set("background", "var(--st-danger-color)").set("color", "white");
-            toggleFaultBtn.setText("Deactivate Faults");
-            toggleFaultBtn.getStyle().set("background", "white").set("color", "var(--st-danger-color)").set("border", "1px solid var(--st-danger-color)");
+            faultStatus.setText("INJECTOR ENGAGED");
+            faultStatus.removeClassName("st-badge-sector");
+            faultStatus.addClassName("st-badge-sell");
+            toggleFaultBtn.setText("Disengage Faults");
+            toggleFaultBtn.removeClassName("st-btn-sell");
+            toggleFaultBtn.addClassName("st-btn-secondary");
         } else {
-            faultStatus.setText("OFF");
-            faultStatus.getStyle().set("background", "rgba(107, 114, 128, 0.1)").set("color", "var(--st-text-muted)");
-            toggleFaultBtn.setText("Activate Faults");
-            toggleFaultBtn.getStyle().set("background", "var(--st-danger-color)").set("color", "white");
+            faultStatus.setText("SYSTEM NORMAL");
+            faultStatus.removeClassName("st-badge-sell");
+            faultStatus.addClassName("st-badge-sector");
+            toggleFaultBtn.setText("Arm Fault Injector");
+            toggleFaultBtn.removeClassName("st-btn-secondary");
+            toggleFaultBtn.addClassName("st-btn-sell");
         }
     }
 
-    private com.vaadin.flow.component.Component createManualPriceSection() {
+    private Component createManualPriceSection() {
         Div section = new Div();
-        section.setWidth("100%");
-        section.getStyle()
-                .set("background", "#ffffff")
-                .set("border", "1px solid var(--st-border-color)")
-                .set("border-radius", "8px")
-                .set("padding", "20px")
-                .set("margin-top", "24px");
+        section.addClassName("st-table-surface");
+        section.getStyle().set("padding", "20px").set("margin-top", "16px").set("width", "100%").set("box-sizing", "border-box");
 
-        H2 header = new H2("Manual Price Update");
-        header.getStyle().set("font-size", "1.2rem").set("margin-top", "0");
-        
-        ComboBox<Stock> stockSelect = new ComboBox<>("Select Stock");
+        H2 header = new H2("Manual Instrument Price Override");
+        header.addClassName("st-section-title");
+
+        Paragraph desc = new Paragraph("Directly update an equity's reference quote to simulate sudden market shocks or liquidity events.");
+        desc.getStyle().set("color", "var(--st-text-secondary)").set("font-size", "13px").set("line-height", "1.5");
+
+        ComboBox<Stock> stockSelect = new ComboBox<>("Select Stock Instrument");
         stockSelect.setItems(stockService.listAll());
-        stockSelect.setItemLabelGenerator(s -> s.getSymbol() + " - " + s.getCompanyName());
-        stockSelect.setWidth("300px");
-        
-        BigDecimalField priceField = new BigDecimalField("New Price");
+        stockSelect.setItemLabelGenerator(s -> s.getSymbol() + " · " + s.getCompanyName());
+        stockSelect.setWidth("320px");
+
+        BigDecimalField priceField = new BigDecimalField("Override Price (₹)");
         priceField.setWidth("200px");
-        
+
         stockSelect.addValueChangeListener(e -> {
             if (e.getValue() != null) {
                 priceField.setValue(e.getValue().getPrice());
@@ -199,11 +222,11 @@ public class AdminToolsView extends VerticalLayout {
                 priceField.clear();
             }
         });
-        
-        Button updateBtn = new Button("Update Price", e -> {
+
+        Button updateBtn = new Button("Apply Price Override", e -> {
             Stock selected = stockSelect.getValue();
             if (selected == null) {
-                showError("Please select a stock.");
+                showError("Please select an instrument to update.");
                 return;
             }
             if (priceField.getValue() == null) {
@@ -212,9 +235,8 @@ public class AdminToolsView extends VerticalLayout {
             }
             try {
                 stockService.updatePrice(selected.getId(), priceField.getValue());
-                showSuccess("Price updated successfully for " + selected.getSymbol());
-                
-                // Refresh items to show new price next time
+                showSuccess("Reference price updated successfully for " + selected.getSymbol() + " to ₹" + priceField.getValue());
+
                 Stock updated = stockService.getById(selected.getId());
                 stockSelect.setItems(stockService.listAll());
                 stockSelect.setValue(updated);
@@ -222,12 +244,14 @@ public class AdminToolsView extends VerticalLayout {
                 showError("Failed to update price: " + ex.getMessage());
             }
         });
-        updateBtn.getStyle().set("background", "var(--st-primary-color)").set("color", "white");
-        
+        updateBtn.addClassNames("st-btn", "st-btn-primary");
+        updateBtn.getElement().removeAttribute("theme");
+
         HorizontalLayout form = new HorizontalLayout(stockSelect, priceField, updateBtn);
         form.setAlignItems(Alignment.BASELINE);
-        
-        section.add(header, form);
+        form.getStyle().set("margin-top", "12px").set("flex-wrap", "wrap").set("gap", "12px");
+
+        section.add(header, desc, form);
         return section;
     }
 
