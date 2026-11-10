@@ -198,15 +198,50 @@ vaadin-app-layout [slot="drawer"] {
   overflow-x: hidden;
 }
 
-/* Desktop > 1024px: Permanent stable sidebar, hide hamburger */
+/* Drawer toggle button (Hamburger / Sidebar toggle on all screen sizes) */
+vaadin-drawer-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  cursor: pointer;
+  color: var(--st-text-secondary);
+  border-radius: var(--st-radius);
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+vaadin-drawer-toggle:hover {
+  color: var(--st-text-primary);
+  background-color: var(--st-bg-surface-elevated);
+}
+
+/* Desktop > 1024px: Fully Responsive Collapsible Sidebar & Full-Screen Layout */
 @media (min-width: 1025px) {
   vaadin-app-layout {
     --vaadin-app-layout-drawer-overlay: false;
-    --vaadin-app-layout-drawer-offset-size: var(--st-sidebar-width);
     --vaadin-app-layout-drawer-width: var(--st-sidebar-width);
     --_vaadin-app-layout-drawer-width: var(--st-sidebar-width);
+    transition: padding-inline-start 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  vaadin-app-layout::part(drawer) {
+
+  /* Desktop Navbar: adapts smoothly to open or collapsed drawer */
+  vaadin-app-layout::part(navbar) {
+    height: 52px;
+    box-sizing: border-box;
+    transition: inset-inline-start 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Desktop Open State: sidebar docked at 260px, content & navbar offset by 260px */
+  vaadin-app-layout[drawer-opened] {
+    --vaadin-app-layout-drawer-offset-size: var(--st-sidebar-width);
+    padding-inline-start: var(--st-sidebar-width) !important;
+  }
+
+  vaadin-app-layout[drawer-opened]::part(drawer) {
     width: var(--st-sidebar-width) !important;
     min-width: var(--st-sidebar-width) !important;
     max-width: var(--st-sidebar-width) !important;
@@ -218,20 +253,61 @@ vaadin-app-layout [slot="drawer"] {
     display: flex !important;
     flex-direction: column !important;
     visibility: visible !important;
-    transform: none !important;
+    transform: translateX(0%) !important;
     position: fixed !important;
     top: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
     z-index: 100 !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
   }
-  vaadin-drawer-toggle {
+
+  vaadin-app-layout[drawer-opened]::part(navbar) {
+    inset-inline-start: var(--st-sidebar-width) !important;
+    left: var(--st-sidebar-width) !important;
+    width: calc(100% - var(--st-sidebar-width)) !important;
+  }
+
+  /* When drawer is open on desktop, hide duplicate brand in navbar */
+  vaadin-app-layout[drawer-opened] .st-navbar-mobile-brand {
     display: none !important;
   }
-  .st-navbar-mobile-brand {
-    display: none !important;
+
+  /* Close/Collapse button inside drawer is visible and functional on desktop */
+  vaadin-app-layout[drawer-opened] .st-drawer-close-btn {
+    display: inline-flex !important;
   }
-  .st-drawer-close-btn {
+
+  /* Desktop Collapsed State: sidebar collapses off-screen, content & navbar expand to 100% ENTIRE SCREEN */
+  vaadin-app-layout:not([drawer-opened]) {
+    --vaadin-app-layout-drawer-offset-size: 0px !important;
+    padding-inline-start: 0px !important;
+    padding-left: 0px !important;
+  }
+
+  vaadin-app-layout:not([drawer-opened])::part(drawer) {
+    transform: translateX(-100%) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0px !important;
+    min-width: 0px !important;
+    max-width: 0px !important;
+    border-right: none !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+  }
+
+  vaadin-app-layout:not([drawer-opened])::part(navbar) {
+    inset-inline-start: 0px !important;
+    left: 0px !important;
+    width: 100% !important;
+  }
+
+  /* When collapsed on desktop, reveal the brand on the full-width navbar */
+  vaadin-app-layout:not([drawer-opened]) .st-navbar-mobile-brand {
+    display: inline-flex !important;
+  }
+
+  vaadin-app-layout:not([drawer-opened]) .st-drawer-close-btn {
     display: none !important;
   }
 }

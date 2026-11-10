@@ -56,12 +56,15 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
             "    al.__wasDesktop = false;" +
             "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
             "  } else {" +
+            "    const wasMobile = (al.__wasDesktop === false);" +
+            "    const isInitial = (al.__wasDesktop === undefined);" +
             "    al.__wasDesktop = true;" +
             "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'false');" +
-            "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '260px');" +
             "    if (typeof al._setOverlay === 'function') al._setOverlay(false);" +
             "    else al.removeAttribute('overlay');" +
-            "    al.drawerOpened = true;" +
+            "    if (isInitial || wasMobile) {" +
+            "      al.drawerOpened = true;" +
+            "    }" +
             "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
             "  }" +
             "};" +
@@ -76,6 +79,7 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
     private void createNavbar() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.setAriaLabel("Toggle navigation");
+        toggle.getElement().setAttribute("title", "Toggle navigation");
         toggle.addClassName("st-drawer-toggle");
         toggle.getStyle().set("color", "var(--st-text-secondary)");
 
@@ -164,7 +168,8 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
         Button closeBtn = new Button();
         closeBtn.addClassName("st-drawer-close-btn");
         closeBtn.setIcon(createSvgIcon(SVG_CLOSE));
-        closeBtn.setAriaLabel("Close admin drawer");
+        closeBtn.setAriaLabel("Collapse sidebar");
+        closeBtn.getElement().setAttribute("title", "Collapse sidebar");
         closeBtn.getElement().removeAttribute("theme");
         closeBtn.addClickListener(e -> setDrawerOpened(false));
         closeBtn.getElement().executeJs("this.addEventListener('click', () => { const al = this.closest('vaadin-app-layout'); if (al) al.drawerOpened = false; });");
