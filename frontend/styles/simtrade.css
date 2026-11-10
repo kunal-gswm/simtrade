@@ -1,54 +1,74 @@
 /* ==========================================================================
-   SIMTRADE 2.0 — INSTITUTIONAL TERMINAL DESIGN SYSTEM
-   Neutral charcoal surfaces, restrained green/red financial indicators,
-   tabular numerals, high information density, dark terminal aesthetic.
+   SIMTRADE 2.0 — DISTINCTIVE FINANCIAL TERMINAL DESIGN SYSTEM
+   Warm Graphite + Copper + Jade Palette
+   Warm Graphite surfaces, refined Copper brand accent, Jade for positive returns,
+   Coral for negative returns, warm off-white typography, tabular numerals.
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ===== Core Institutional Design Tokens ===== */
 :root {
-  /* Surfaces & Canvas */
-  --st-bg-main: #0B0E14;              /* Deep obsidian canvas */
-  --st-bg-surface: #131722;           /* Primary graphite slate panel */
-  --st-bg-surface-secondary: #1A1F2C; /* Secondary elevated slate */
-  --st-bg-surface-tertiary: #202636;  /* High elevation / dialogs */
-  --st-bg-hover: #1E2433;             /* Subtle row/button hover */
-  --st-bg-active: #283042;            /* Pressed state */
+  /* Surfaces & Canvas — Warm Graphite */
+  --st-bg-main: #17151B;              /* Warm graphite base canvas */
+  --st-bg-surface: #201D25;           /* Primary graphite panel surface */
+  --st-bg-surface-secondary: #25212A; /* Elevated surface / inputs / headers */
+  --st-bg-surface-tertiary: #2D2733;  /* High elevation / modals */
+  --st-bg-hover: #302A35;             /* Subtle row/button hover */
+  --st-bg-active: #3A3340;            /* Pressed interactive state */
 
-  /* Borders & Dividers */
-  --st-border: #2A2E39;               /* Primary 1px structural border */
-  --st-border-subtle: #1F232E;        /* Subtle row divider */
-  --st-border-bright: #363C4E;        /* Highlight border */
+  /* Structural Borders */
+  --st-border: #393340;               /* Primary 1px structural border */
+  --st-border-subtle: #2B2632;        /* Subtle row divider */
+  --st-border-bright: #4D4456;        /* Highlight border */
 
-  /* Typography Colors */
-  --st-text-primary: #E6EDF3;         /* Crisp off-white (high contrast) */
-  --st-text-secondary: #8B949E;       /* Slate muted for labels and meta */
-  --st-text-muted: #6E7681;           /* Deeper muted */
-  --st-text-dim: #484F58;             /* Subtle guides */
+  /* Typography Colors — Warm Off-White */
+  --st-text-primary: #F0EAE2;         /* Warm off-white (crisp high contrast) */
+  --st-text-secondary: #A9A0A0;       /* Muted warm graphite for labels & metadata */
+  --st-text-muted: #787070;           /* Deeper muted */
+  --st-text-dim: #544E4E;             /* Subtle guides */
 
-  /* Brand / Action Colors */
-  --st-blue: #2962FF;                 /* Institutional terminal blue */
-  --st-blue-hover: #1E53E5;
-  --st-blue-pressed: #1844BC;
-  --st-blue-bg: rgba(41, 98, 255, 0.12);
-  --st-blue-border: rgba(41, 98, 255, 0.35);
+  /* Primary Brand & Action Accent — Rich Copper */
+  --st-copper: #D18B5A;               /* Distinctive warm copper */
+  --st-copper-hover: #DF9B6A;
+  --st-copper-pressed: #BF7B4A;
+  --st-copper-bg: rgba(209, 139, 90, 0.12);
+  --st-copper-border: rgba(209, 139, 90, 0.32);
 
-  /* Financial Indicators: Restrained Institutional Greens & Reds */
-  --st-green: #089981;                /* Institutional teal-green */
-  --st-green-hover: #067A67;
-  --st-green-bg: rgba(8, 153, 129, 0.12);
-  --st-green-border: rgba(8, 153, 129, 0.32);
+  /* Primary Action Aliases */
+  --st-blue: var(--st-copper);
+  --st-blue-hover: var(--st-copper-hover);
+  --st-blue-pressed: var(--st-copper-pressed);
+  --st-blue-bg: var(--st-copper-bg);
+  --st-blue-border: var(--st-copper-border);
 
-  --st-red: #F23645;                  /* Institutional berry/crimson */
-  --st-red-hover: #D62A38;
-  --st-red-bg: rgba(242, 54, 69, 0.12);
-  --st-red-border: rgba(242, 54, 69, 0.32);
+  /* Positive Returns & Buy Indicator — Institutional Jade */
+  --st-jade: #4FAE91;                 /* Refined institutional jade green */
+  --st-jade-hover: #429A7F;
+  --st-jade-pressed: #35856D;
+  --st-jade-bg: rgba(79, 174, 145, 0.12);
+  --st-jade-border: rgba(79, 174, 145, 0.30);
+  --st-green: var(--st-jade);
+  --st-green-hover: var(--st-jade-hover);
+  --st-green-bg: var(--st-jade-bg);
+  --st-green-border: var(--st-jade-border);
 
-  --st-amber: #D97706;                /* Restrained warning amber */
-  --st-amber-bg: rgba(217, 119, 6, 0.12);
+  /* Negative Returns & Sell Indicator — Restrained Coral */
+  --st-coral: #E47778;                /* Institutional coral crimson red */
+  --st-coral-hover: #D46768;
+  --st-coral-pressed: #BE5556;
+  --st-coral-bg: rgba(228, 119, 120, 0.12);
+  --st-coral-border: rgba(228, 119, 120, 0.30);
+  --st-red: var(--st-coral);
+  --st-red-hover: var(--st-coral-hover);
+  --st-red-bg: var(--st-coral-bg);
+  --st-red-border: var(--st-coral-border);
 
-  --st-focus: rgba(41, 98, 255, 0.45);
+  /* Warning / Diagnostics Accent */
+  --st-amber: #D18B5A;
+  --st-amber-bg: rgba(209, 139, 90, 0.14);
+
+  --st-focus: rgba(209, 139, 90, 0.40);
 
   /* Geometry & Typography */
   --st-radius-sm: 3px;
@@ -58,11 +78,11 @@
   --st-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Menlo, monospace;
   --st-transition: 120ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Compatibility Aliases for Admin / Legacy Views */
+  /* Compatibility Aliases for Legacy & Admin Views */
   --st-text-main: var(--st-text-primary);
-  --st-primary-color: var(--st-blue);
-  --st-danger-color: var(--st-red);
-  --st-success-color: var(--st-green);
+  --st-primary-color: var(--st-copper);
+  --st-danger-color: var(--st-coral);
+  --st-success-color: var(--st-jade);
   --st-border-color: var(--st-border);
   --st-bg-color: var(--st-bg-main);
   --st-hover-bg: var(--st-bg-hover);
@@ -74,7 +94,7 @@
   }
 }
 
-/* ===== Vaadin Lumo Overrides (Dark Institutional Base) ===== */
+/* ===== Vaadin Lumo Overrides ===== */
 html {
   --lumo-font-family: var(--st-font);
   --lumo-base-color: var(--st-bg-surface);
@@ -82,30 +102,30 @@ html {
   --lumo-header-text-color: var(--st-text-primary);
   --lumo-secondary-text-color: var(--st-text-secondary);
 
-  --lumo-primary-color: var(--st-blue);
-  --lumo-primary-text-color: var(--st-blue);
-  --lumo-success-color: var(--st-green);
-  --lumo-success-text-color: var(--st-green);
-  --lumo-error-color: var(--st-red);
-  --lumo-error-text-color: var(--st-red);
+  --lumo-primary-color: var(--st-copper);
+  --lumo-primary-text-color: var(--st-copper);
+  --lumo-success-color: var(--st-jade);
+  --lumo-success-text-color: var(--st-jade);
+  --lumo-error-color: var(--st-coral);
+  --lumo-error-text-color: var(--st-coral);
 
   --lumo-contrast-5pct: var(--st-bg-surface-secondary);
   --lumo-contrast-10pct: var(--st-border);
   --lumo-contrast-20pct: var(--st-border-bright);
-  --lumo-contrast-30pct: #4A5060;
+  --lumo-contrast-30pct: #4D4456;
   --lumo-contrast-90pct: var(--st-text-primary);
 
   --lumo-border-radius-s: var(--st-radius-sm);
   --lumo-border-radius-m: var(--st-radius);
   --lumo-border-radius-l: var(--st-radius-lg);
 
-  --lumo-size-m: 36px;
-  --lumo-size-l: 40px;
+  --lumo-size-m: 34px;
+  --lumo-size-l: 38px;
   background-color: var(--st-bg-main);
   color: var(--st-text-primary);
 }
 
-/* ===== Tabular Figures for Numbers & Financials ===== */
+/* ===== Tabular Figures for All Financial Numbers ===== */
 .tabular-num,
 .st-num,
 .st-stat-value,
@@ -116,15 +136,15 @@ vaadin-grid,
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== Vaadin AppLayout Shell ===== */
+/* ===== AppLayout Shell & Navigation ===== */
 vaadin-app-layout {
-  --vaadin-app-layout-drawer-offset-size: 240px;
+  --vaadin-app-layout-drawer-offset-size: 250px;
   background-color: var(--st-bg-main);
 }
 
 vaadin-app-layout::part(navbar) {
-  height: 56px;
-  min-height: 56px;
+  height: 52px;
+  min-height: 52px;
   border-bottom: 1px solid var(--st-border);
   box-shadow: none;
   background: var(--st-bg-surface);
@@ -132,7 +152,7 @@ vaadin-app-layout::part(navbar) {
 }
 
 vaadin-app-layout::part(drawer) {
-  width: 240px;
+  width: 250px;
   background: var(--st-bg-surface);
   border-right: 1px solid var(--st-border);
   padding-top: 0;
@@ -151,19 +171,19 @@ vaadin-app-layout [slot="drawer"] {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--st-border);
-  min-height: 56px;
+  min-height: 52px;
   box-sizing: border-box;
 }
 .st-drawer-brand svg {
-  color: var(--st-blue);
+  color: var(--st-copper);
   width: 20px;
   height: 20px;
   flex-shrink: 0;
 }
 .st-drawer-brand .st-brand-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--st-text-primary);
   letter-spacing: -0.3px;
@@ -176,28 +196,32 @@ vaadin-app-layout [slot="drawer"] {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--st-blue);
-  background: var(--st-blue-bg);
-  border: 1px solid var(--st-blue-border);
+  color: var(--st-copper);
+  background: var(--st-copper-bg);
+  border: 1px solid var(--st-copper-border);
   padding: 1px 5px;
   border-radius: 2px;
 }
 
-/* ===== Drawer Nav Links ===== */
+/* ===== Drawer Nav Links (Fix for Sidebar Clipping) ===== */
 .st-nav-section-title {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--st-text-muted);
-  padding: 16px 20px 6px;
+  padding: 14px 18px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 .st-nav-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 20px;
-  height: 40px;
+  padding: 0 18px;
+  height: 38px;
   text-decoration: none !important;
   color: var(--st-text-secondary);
   font-size: 13px;
@@ -219,8 +243,8 @@ vaadin-app-layout [slot="drawer"] {
 }
 .st-nav-link.active {
   color: var(--st-text-primary);
-  background-color: rgba(41, 98, 255, 0.08);
-  border-left-color: var(--st-blue);
+  background-color: rgba(209, 139, 90, 0.09);
+  border-left-color: var(--st-copper);
   font-weight: 600;
 }
 .st-nav-link svg {
@@ -230,16 +254,16 @@ vaadin-app-layout [slot="drawer"] {
   color: inherit;
 }
 
-/* Drawer footer for system version */
+/* Drawer footer */
 .st-drawer-footer {
   margin-top: auto;
-  padding: 14px 20px;
+  padding: 12px 18px;
   border-top: 1px solid var(--st-border);
   font-size: 11px;
   color: var(--st-text-muted);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 /* ===== Navbar Header ===== */
@@ -248,68 +272,68 @@ vaadin-app-layout [slot="drawer"] {
   align-items: center;
   width: 100%;
   height: 100%;
-  gap: 14px;
+  gap: 12px;
 }
 .st-navbar-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--st-text-secondary);
-  margin-left: 12px;
+  margin-left: 8px;
 }
 .st-pulse-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background-color: var(--st-green);
-  box-shadow: 0 0 0 2px rgba(8, 153, 129, 0.25);
+  background-color: var(--st-jade);
+  box-shadow: 0 0 0 2px rgba(79, 174, 145, 0.25);
   animation: st-pulse 2s infinite ease-in-out;
 }
 @keyframes st-pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0.5); }
-  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(8, 153, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(8, 153, 129, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 174, 145, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(79, 174, 145, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 174, 145, 0); }
 }
 
 .st-navbar-user {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 .st-navbar-username {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-primary);
   font-weight: 600;
 }
 .st-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
   background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
-  color: var(--st-text-primary);
+  color: var(--st-copper);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
 }
 .st-navbar-logout {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--st-text-secondary);
   cursor: pointer;
   background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
   font-weight: 500;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: var(--st-radius);
   transition: background var(--st-transition), color var(--st-transition), border-color var(--st-transition);
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
+  gap: 5px;
+  height: 26px;
 }
 .st-navbar-logout:hover {
   background: var(--st-bg-hover);
@@ -317,20 +341,20 @@ vaadin-app-layout [slot="drawer"] {
   border-color: var(--st-border-bright);
 }
 .st-navbar-logout svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 /* ===== Page Content Wrapper ===== */
 .st-page {
   background: var(--st-bg-main);
-  padding: 20px 24px;
+  padding: 18px 22px;
   min-height: 100%;
   box-sizing: border-box;
   color: var(--st-text-primary);
 }
 @media (max-width: 768px) {
-  .st-page { padding: 14px 16px; }
+  .st-page { padding: 12px 14px; }
 }
 
 .st-header-container {
@@ -338,9 +362,9 @@ vaadin-app-layout [slot="drawer"] {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--st-border-subtle);
 }
 
@@ -349,124 +373,120 @@ vaadin-app-layout [slot="drawer"] {
   flex-direction: column;
 }
 
-.st-page-header {
-  margin-bottom: 16px;
-}
 .st-page-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--st-text-primary);
   margin: 0;
   line-height: 1.25;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 .st-page-subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
-  margin: 4px 0 0 0;
+  margin: 3px 0 0 0;
 }
 
-/* ===== Stat / KPI Cards (Institutional Density) ===== */
+/* ===== Balanced, Compact KPI Stat Cards ===== */
 .st-stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .st-stat-card {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
-  border-radius: var(--st-radius-lg);
-  padding: 14px 16px;
+  border-radius: var(--st-radius);
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 78px;
+  min-height: 68px;
   box-sizing: border-box;
   transition: border-color var(--st-transition);
 }
 .st-stat-card:hover {
   border-color: var(--st-border-bright);
 }
+.st-stat-card-featured {
+  border-color: var(--st-copper-border);
+  background: linear-gradient(135deg, rgba(209, 139, 90, 0.05) 0%, var(--st-bg-surface) 100%);
+}
 .st-stat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .st-stat-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--st-text-secondary);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin: 0;
 }
-.st-stat-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--st-text-muted);
-}
 .st-stat-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--st-text-primary);
   line-height: 1.2;
 }
 .st-stat-subtext {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--st-text-muted);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 /* ===== Section Headers ===== */
 .st-section-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--st-text-primary);
-  margin: 0 0 4px 0;
+  margin: 0 0 3px 0;
   letter-spacing: -0.2px;
 }
 .st-section-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--st-text-secondary);
-  margin: 0 0 14px 0;
+  margin: 0 0 10px 0;
 }
 
 /* ===== Table Surface & Vaadin Grid ===== */
 .st-table-surface {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
-  border-radius: var(--st-radius-lg);
+  border-radius: var(--st-radius);
   overflow: hidden;
 }
 
 vaadin-grid {
   --lumo-base-color: var(--st-bg-surface);
-  font-size: 13px;
+  font-size: 12px;
   border: none !important;
   background: var(--st-bg-surface);
 }
 
 vaadin-grid::part(header-cell) {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--st-text-secondary);
   background: var(--st-bg-surface-secondary);
   border-bottom: 1px solid var(--st-border);
-  padding: 10px 14px;
-  min-height: 38px;
+  padding: 8px 12px;
+  min-height: 34px;
 }
 
 vaadin-grid::part(body-cell) {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-primary);
-  min-height: 44px;
+  min-height: 40px;
   border-bottom: 1px solid var(--st-border-subtle);
-  padding: 0 14px;
+  padding: 0 12px;
 }
 
 vaadin-grid::part(row):hover {
@@ -477,21 +497,21 @@ vaadin-grid::part(body-cell)::-webkit-scrollbar {
   display: none;
 }
 
-/* ===== Buttons (Clean, Restrained) ===== */
+/* ===== Buttons (Warm Graphite, Copper, Jade, Coral) ===== */
 .st-btn {
   border: none;
   border-radius: var(--st-radius);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  padding: 0 14px;
-  height: 34px;
-  line-height: 34px;
+  padding: 0 12px;
+  height: 32px;
+  line-height: 32px;
   transition: background var(--st-transition), color var(--st-transition), border-color var(--st-transition), opacity var(--st-transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
@@ -507,27 +527,28 @@ vaadin-grid::part(body-cell)::-webkit-scrollbar {
 }
 
 .st-btn-primary {
-  background: var(--st-blue);
-  color: #FFFFFF;
+  background: var(--st-copper);
+  color: #17151B;
+  font-weight: 600;
 }
-.st-btn-primary:hover:not(:disabled) { background: var(--st-blue-hover); }
-.st-btn-primary:active:not(:disabled) { background: var(--st-blue-pressed); }
+.st-btn-primary:hover:not(:disabled) { background: var(--st-copper-hover); }
+.st-btn-primary:active:not(:disabled) { background: var(--st-copper-pressed); }
 
 .st-btn-buy {
-  background: var(--st-green);
-  color: #FFFFFF;
+  background: var(--st-jade);
+  color: #17151B;
   font-weight: 600;
 }
-.st-btn-buy:hover:not(:disabled) { background: var(--st-green-hover); }
-.st-btn-buy:active:not(:disabled) { background: #056656; }
+.st-btn-buy:hover:not(:disabled) { background: var(--st-jade-hover); }
+.st-btn-buy:active:not(:disabled) { background: var(--st-jade-pressed); }
 
 .st-btn-sell {
-  background: var(--st-red);
-  color: #FFFFFF;
+  background: var(--st-coral);
+  color: #17151B;
   font-weight: 600;
 }
-.st-btn-sell:hover:not(:disabled) { background: var(--st-red-hover); }
-.st-btn-sell:active:not(:disabled) { background: #B9202D; }
+.st-btn-sell:hover:not(:disabled) { background: var(--st-coral-hover); }
+.st-btn-sell:active:not(:disabled) { background: var(--st-coral-pressed); }
 
 .st-btn-secondary {
   background: var(--st-bg-surface-secondary);
@@ -545,54 +566,54 @@ vaadin-grid::part(body-cell)::-webkit-scrollbar {
 .st-btn-text {
   background: transparent;
   color: var(--st-text-secondary);
-  height: 30px;
-  line-height: 30px;
-  padding: 0 8px;
+  height: 28px;
+  line-height: 28px;
+  padding: 0 6px;
 }
 .st-btn-text:hover:not(:disabled) {
   color: var(--st-text-primary);
   background: var(--st-bg-hover);
 }
 
-/* ===== Badges & Pills ===== */
+/* ===== Badges & Status Pills ===== */
 .st-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: var(--st-radius-sm);
   line-height: 1.4;
 }
 .st-badge-buy {
-  background: var(--st-green-bg);
-  color: var(--st-green);
-  border: 1px solid var(--st-green-border);
+  background: var(--st-jade-bg);
+  color: var(--st-jade);
+  border: 1px solid var(--st-jade-border);
 }
 .st-badge-sell {
-  background: var(--st-red-bg);
-  color: var(--st-red);
-  border: 1px solid var(--st-red-border);
+  background: var(--st-coral-bg);
+  color: var(--st-coral);
+  border: 1px solid var(--st-coral-border);
 }
 .st-badge-sector {
   color: var(--st-text-secondary);
   background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: var(--st-radius-sm);
 }
 
 /* ===== Positive / Negative Numbers ===== */
 .st-positive {
-  color: var(--st-green) !important;
+  color: var(--st-jade) !important;
   font-weight: 600;
 }
 .st-negative {
-  color: var(--st-red) !important;
+  color: var(--st-coral) !important;
   font-weight: 600;
 }
 
@@ -606,18 +627,18 @@ vaadin-grid::part(body-cell)::-webkit-scrollbar {
 
 /* ===== Search & Filter Controls ===== */
 .st-search-field {
-  width: 280px;
+  width: 260px;
   max-width: 100%;
 }
 .st-search-field::part(input-field) {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius);
-  height: 36px;
+  height: 32px;
   color: var(--st-text-primary);
 }
 .st-search-field::part(input-field):focus-within {
-  border-color: var(--st-blue);
+  border-color: var(--st-copper);
   box-shadow: 0 0 0 2px var(--st-focus);
 }
 
@@ -631,16 +652,16 @@ vaadin-dialog-overlay::part(overlay) {
 }
 vaadin-dialog-overlay::part(header) {
   border-bottom: 1px solid var(--st-border);
-  padding: 14px 20px;
+  padding: 12px 18px;
 }
 vaadin-dialog-overlay::part(title) {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--st-text-primary);
 }
 vaadin-dialog-overlay::part(footer) {
   border-top: 1px solid var(--st-border);
-  padding: 12px 20px;
+  padding: 10px 18px;
   background: var(--st-bg-surface-secondary);
 }
 
@@ -648,17 +669,17 @@ vaadin-dialog-overlay::part(footer) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 6px 0;
   width: 100%;
   box-sizing: border-box;
 }
 .st-dialog-row-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
   font-weight: 500;
 }
 .st-dialog-row-value {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--st-text-primary);
 }
@@ -666,8 +687,8 @@ vaadin-dialog-overlay::part(footer) {
   background: var(--st-bg-surface-secondary);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius);
-  padding: 12px 14px;
-  margin-top: 14px;
+  padding: 10px 12px;
+  margin-top: 12px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -677,37 +698,37 @@ vaadin-dialog-overlay::part(footer) {
 .st-dialog-note {
   font-size: 11px;
   color: var(--st-text-muted);
-  margin-top: 8px;
+  margin-top: 6px;
   display: block;
 }
 
-/* ===== Empty State ===== */
+/* ===== Compact Empty State ===== */
 .st-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
+  padding: 24px 16px;
   text-align: center;
 }
 .st-empty-state svg {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   color: var(--st-text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .st-empty-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--st-text-primary);
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
 }
 .st-empty-text {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
-  margin: 0 0 20px 0;
-  max-width: 360px;
-  line-height: 1.5;
+  margin: 0 0 14px 0;
+  max-width: 320px;
+  line-height: 1.4;
 }
 
 /* ===== Login & Register Pages ===== */
@@ -718,63 +739,63 @@ vaadin-dialog-overlay::part(footer) {
 }
 .st-login-brand-panel {
   flex: 1.1;
-  background: radial-gradient(circle at top left, #1A2030, #0B0E14);
+  background: radial-gradient(circle at top left, #25212A, #17151B);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 64px 80px;
+  padding: 56px 72px;
   position: relative;
   border-right: 1px solid var(--st-border);
 }
 .st-login-brand-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
+  gap: 10px;
+  margin-bottom: 28px;
 }
 .st-login-brand-logo svg {
-  width: 28px;
-  height: 28px;
-  color: var(--st-blue);
+  width: 26px;
+  height: 26px;
+  color: var(--st-copper);
 }
 .st-login-brand-name {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--st-text-primary);
   letter-spacing: -0.3px;
 }
 .st-login-brand-heading {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--st-text-primary);
   line-height: 1.3;
-  margin: 0 0 14px 0;
-  max-width: 420px;
-  letter-spacing: -0.4px;
+  margin: 0 0 12px 0;
+  max-width: 400px;
+  letter-spacing: -0.3px;
 }
 .st-login-brand-text {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--st-text-secondary);
   line-height: 1.6;
-  max-width: 420px;
+  max-width: 400px;
 }
 .st-login-feature-list {
-  margin-top: 32px;
+  margin-top: 28px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .st-login-feature-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
 }
 .st-login-feature-item svg {
-  color: var(--st-green);
-  width: 16px;
-  height: 16px;
+  color: var(--st-jade);
+  width: 15px;
+  height: 15px;
 }
 
 .st-login-form-panel {
@@ -782,35 +803,35 @@ vaadin-dialog-overlay::part(footer) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px;
+  padding: 40px;
   background: var(--st-bg-main);
 }
 .st-login-form-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius-lg);
-  padding: 32px;
+  padding: 28px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .st-login-form-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--st-text-primary);
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   letter-spacing: -0.2px;
 }
 .st-login-form-subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-secondary);
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
 }
 .st-login-footer {
   text-align: center;
   font-size: 11px;
   color: var(--st-text-muted);
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 /* ===== Form Controls & TextFields ===== */
@@ -834,7 +855,7 @@ vaadin-integer-field::part(input-field):focus-within,
 vaadin-big-decimal-field::part(input-field):focus-within,
 vaadin-text-area::part(input-field):focus-within,
 vaadin-combo-box::part(input-field):focus-within {
-  border-color: var(--st-blue);
+  border-color: var(--st-copper);
   box-shadow: 0 0 0 2px var(--st-focus);
 }
 
@@ -845,62 +866,62 @@ vaadin-integer-field::part(label),
 vaadin-big-decimal-field::part(label),
 vaadin-text-area::part(label),
 vaadin-combo-box::part(label) {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--st-text-secondary);
 }
 
-/* ===== Allocation Bar (Portfolio) ===== */
+/* ===== Allocation Bar (Warm Graphite, Copper, Jade) ===== */
 .st-allocation-container {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
-  border-radius: var(--st-radius-lg);
-  padding: 16px 20px;
-  margin-bottom: 20px;
+  border-radius: var(--st-radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
 }
 .st-allocation-bar {
   display: flex;
-  height: 8px;
+  height: 6px;
   width: 100%;
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
   background: var(--st-bg-surface-secondary);
-  margin: 10px 0;
+  margin: 8px 0;
 }
 .st-allocation-cash {
-  background: var(--st-blue);
+  background: var(--st-copper);
   height: 100%;
   transition: width var(--st-transition);
 }
 .st-allocation-equity {
-  background: var(--st-green);
+  background: var(--st-jade);
   height: 100%;
   transition: width var(--st-transition);
 }
 .st-allocation-legend {
   display: flex;
-  gap: 20px;
-  font-size: 12px;
+  gap: 18px;
+  font-size: 11px;
   color: var(--st-text-secondary);
 }
 .st-legend-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 5px;
 }
 
 /* ===== Responsive Breakpoint Rules ===== */
 @media (max-width: 1024px) {
   .st-stats-row {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
 
 @media (max-width: 900px) {
   .st-login-brand-panel { display: none; }
-  .st-login-form-panel { padding: 24px; }
+  .st-login-form-panel { padding: 20px; }
 }
 
 @media (max-width: 768px) {
@@ -918,7 +939,7 @@ vaadin-combo-box::part(label) {
     grid-template-columns: 1fr;
   }
   .st-page {
-    padding: 12px;
+    padding: 10px;
   }
   vaadin-dialog-overlay::part(overlay) {
     width: 95vw !important;

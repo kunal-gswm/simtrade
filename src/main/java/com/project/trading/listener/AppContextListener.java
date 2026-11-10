@@ -14,7 +14,7 @@ public class AppContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         PriceSimulator simulator = new PriceSimulator();
-        simulator.start(1); // Update every 1 second
+        simulator.start(3); // Controlled 3-second simulation interval
         sce.getServletContext().setAttribute(SIMULATOR_ATTR, simulator);
     }
 

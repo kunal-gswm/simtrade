@@ -1,5 +1,6 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
 import com.project.trading.model.AuthUser;
@@ -8,7 +9,10 @@ import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
 import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
@@ -44,12 +48,15 @@ public class PortfolioView extends Div {
     private final NumberFormat currencyFormat;
     private final NumberFormat percentFormat;
 
-    private final Span netWorthValue;
-    private final Span cashValue;
-    private final Span investedValue;
-    private final Span holdingsValue;
-    private final Span unrealizedPnlValue;
-    private final Span realizedPnlValue;
+    private AuthUser currentUser;
+    private MarketDataBroadcaster.Registration broadcastRegistration;
+
+    private final Span netWorthValue = new Span("-");
+    private final Span cashValue = new Span("-");
+    private final Span investedValue = new Span("-");
+    private final Span holdingsValue = new Span("-");
+    private final Span unrealizedPnlValue = new Span("-");
+    private final Span realizedPnlValue = new Span("-");
 
     private final Div emptyState;
     private final Div holdingsSection;
@@ -69,11 +76,13 @@ public class PortfolioView extends Div {
 
         addClassName("st-page");
 
+        currentUser = securityService.getAuthenticatedUser();
+
         Div titleGroup = new Div();
         titleGroup.addClassName("st-page-title-group");
         H2 title = new H2("Portfolio & Holdings");
         title.addClassName("st-page-title");
-        Paragraph subtitle = new Paragraph("Track position valuations, cost basis, unrealized returns and portfolio distribution.");
+        Paragraph subtitle = new Paragraph("Live position mark-to-market valuations, cost basis, unrealized returns and portfolio distribution.");
         subtitle.addClassName("st-page-subtitle");
         titleGroup.add(title, subtitle);
 
@@ -81,28 +90,14 @@ public class PortfolioView extends Div {
         Div statsRow = new Div();
         statsRow.addClassName("st-stats-row");
 
-        netWorthValue = new Span("-");
-        netWorthValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Total Net Worth", netWorthValue, "Cash + Equity holdings"));
+        Div netWorthCard = createStatCard("Total Net Worth", netWorthValue, "Cash + Equity holdings");
+        netWorthCard.addClassName("st-stat-card-featured");
+        statsRow.add(netWorthCard);
 
-        cashValue = new Span("-");
-        cashValue.addClassName("st-stat-value");
-        statsRow.add(createStatCard("Available Cash", cashValue, "Settled buying power"));
-
-        investedValue = new Span("-");
-        investedValue.addClassName("st-stat-value");
+        statsRow.add(createStatCard("Available Cash", cashValue, "Settled purchasing power"));
         statsRow.add(createStatCard("Total Invested", investedValue, "Aggregate cost basis"));
-
-        holdingsValue = new Span("-");
-        holdingsValue.addClassName("st-stat-value");
         statsRow.add(createStatCard("Holdings Value", holdingsValue, "Current mark-to-market"));
-
-        unrealizedPnlValue = new Span("-");
-        unrealizedPnlValue.addClassName("st-stat-value");
         statsRow.add(createStatCard("Unrealized P&L", unrealizedPnlValue, "Floating open returns"));
-
-        realizedPnlValue = new Span("-");
-        realizedPnlValue.addClassName("st-stat-value");
         statsRow.add(createStatCard("Realized P&L", realizedPnlValue, "Settled closed trades"));
 
         Div headerContainer = new Div(titleGroup, statsRow);
@@ -116,11 +111,11 @@ public class PortfolioView extends Div {
         holdingsSection = new Div();
         H3 sectionTitle = new H3("Open Equity Positions");
         sectionTitle.addClassName("st-section-title");
-        Paragraph sectionSubtitle = new Paragraph("Individual stocks currently held in your paper trading account.");
+        Paragraph sectionSubtitle = new Paragraph("Live position mark-to-market tracking updating with real-time simulated price ticks.");
         sectionSubtitle.addClassName("st-section-subtitle");
         holdingsSection.add(sectionTitle, sectionSubtitle);
 
-        // Grid
+        // Responsive Grid with Column Prioritization
         grid = new Grid<>(PortfolioService.HoldingRow.class, false);
         grid.setAllRowsVisible(true);
 
@@ -180,7 +175,7 @@ public class PortfolioView extends Div {
             Button sellBtn = new Button("Sell");
             sellBtn.addClassNames("st-btn", "st-btn-sell");
             sellBtn.getElement().removeAttribute("theme");
-            sellBtn.getStyle().set("height", "28px").set("font-size", "12px").set("padding", "0 12px");
+            sellBtn.getStyle().set("height", "26px").set("font-size", "11px").set("padding", "0 10px");
             sellBtn.addClickListener(e -> openSellDialog(row));
             return sellBtn;
         }).setHeader("Action").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
@@ -193,11 +188,11 @@ public class PortfolioView extends Div {
         emptyState.addClassName("st-empty-state");
         emptyState.setVisible(false);
 
-        Component walletIcon = createSvgIcon(SVG_WALLET, "40px");
+        Component walletIcon = createSvgIcon(SVG_WALLET, "36px");
         Div emptyTitle2 = new Div();
         emptyTitle2.addClassName("st-empty-title");
         emptyTitle2.setText("Your portfolio has no open positions");
-        Paragraph emptyText = new Paragraph("Select an equity from the Market Quotes page to place your first paper trade.");
+        Paragraph emptyText = new Paragraph("Select an equity instrument from the Market Quotes page to place your first simulated trade.");
         emptyText.addClassName("st-empty-text");
 
         RouterLink marketLink = new RouterLink();
@@ -212,7 +207,44 @@ public class PortfolioView extends Div {
         holdingsSection.add(tableContainer, emptyState);
 
         add(headerContainer, allocationContainer, holdingsSection);
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        UI ui = attachEvent.getUI();
+
+        // Immediate load
         updateData();
+
+        // Broadcast subscription for live real-time price changes & trades
+        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+            @Override
+            public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
+                ui.access(() -> updateData());
+            }
+
+            @Override
+            public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
+                if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
+                    ui.access(() -> updateData());
+                }
+            }
+        });
+
+        // Fallback polling
+        ui.setPollInterval(3000);
+        ui.addPollListener(e -> updateData());
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (broadcastRegistration != null) {
+            broadcastRegistration.remove();
+            broadcastRegistration = null;
+        }
+        detachEvent.getUI().setPollInterval(-1);
+        super.onDetach(detachEvent);
     }
 
     private Component createSvgIcon(String svgData, String size) {
@@ -233,6 +265,9 @@ public class PortfolioView extends Div {
         labelSpan.addClassName("st-stat-label");
         header.add(labelSpan);
 
+        value.addClassName("st-stat-value");
+        value.addClassName("tabular-num");
+
         Span sub = new Span(subtext);
         sub.addClassName("st-stat-subtext");
 
@@ -240,13 +275,11 @@ public class PortfolioView extends Div {
         return card;
     }
 
-    private void updateData() {
+    private synchronized void updateData() {
         try {
-            AuthUser user = securityService.getAuthenticatedUser();
-            if (user == null) return;
+            if (currentUser == null) return;
 
-            Portfolio portfolio = portfolioService.getPortfolioForUser(user.getId());
-            PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(portfolio);
+            PortfolioService.PortfolioSummary summary = portfolioService.getSummaryForUser(currentUser.getId());
 
             netWorthValue.setText(currencyFormat.format(summary.netWorth));
             cashValue.setText(currencyFormat.format(summary.cash));
@@ -255,31 +288,12 @@ public class PortfolioView extends Div {
 
             String unSign = summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
             unrealizedPnlValue.setText(unSign + currencyFormat.format(summary.totalUnrealizedPnl));
-            if (summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
-                unrealizedPnlValue.addClassName("st-positive");
-                unrealizedPnlValue.removeClassName("st-negative");
-            } else if (summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) < 0) {
-                unrealizedPnlValue.addClassName("st-negative");
-                unrealizedPnlValue.removeClassName("st-positive");
-            } else {
-                unrealizedPnlValue.removeClassName("st-positive");
-                unrealizedPnlValue.removeClassName("st-negative");
-            }
+            setPnlColor(unrealizedPnlValue, summary.totalUnrealizedPnl);
 
             String reSign = summary.realizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
             realizedPnlValue.setText(reSign + currencyFormat.format(summary.realizedPnl));
-            if (summary.realizedPnl.compareTo(BigDecimal.ZERO) > 0) {
-                realizedPnlValue.addClassName("st-positive");
-                realizedPnlValue.removeClassName("st-negative");
-            } else if (summary.realizedPnl.compareTo(BigDecimal.ZERO) < 0) {
-                realizedPnlValue.addClassName("st-negative");
-                realizedPnlValue.removeClassName("st-positive");
-            } else {
-                realizedPnlValue.removeClassName("st-positive");
-                realizedPnlValue.removeClassName("st-negative");
-            }
+            setPnlColor(realizedPnlValue, summary.realizedPnl);
 
-            // Update Allocation Bar
             updateAllocationBar(summary);
 
             if (summary.rows.isEmpty()) {
@@ -297,6 +311,16 @@ public class PortfolioView extends Div {
         }
     }
 
+    private void setPnlColor(Span span, BigDecimal value) {
+        span.removeClassName("st-positive");
+        span.removeClassName("st-negative");
+        if (value.compareTo(BigDecimal.ZERO) > 0) {
+            span.addClassName("st-positive");
+        } else if (value.compareTo(BigDecimal.ZERO) < 0) {
+            span.addClassName("st-negative");
+        }
+    }
+
     private void updateAllocationBar(PortfolioService.PortfolioSummary summary) {
         allocationContainer.removeAll();
 
@@ -305,7 +329,7 @@ public class PortfolioView extends Div {
         top.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
 
         Span title = new Span("Capital Allocation");
-        title.getStyle().set("font-size", "12px").set("font-weight", "600").set("text-transform", "uppercase").set("letter-spacing", "0.05em").set("color", "var(--st-text-secondary)");
+        title.getStyle().set("font-size", "11px").set("font-weight", "600").set("text-transform", "uppercase").set("letter-spacing", "0.06em").set("color", "var(--st-text-secondary)");
 
         BigDecimal total = summary.netWorth;
         double cashPct = 100.0;
@@ -319,7 +343,7 @@ public class PortfolioView extends Div {
         }
 
         Span ratioText = new Span(String.format(Locale.US, "Cash: %.1f%%  ·  Equity: %.1f%%", cashPct, equityPct));
-        ratioText.getStyle().set("font-size", "12px").set("color", "var(--st-text-muted)").set("font-feature-settings", "\"tnum\"");
+        ratioText.getStyle().set("font-size", "11px").set("color", "var(--st-text-muted)").set("font-feature-settings", "\"tnum\"");
 
         top.add(title, ratioText);
 
@@ -341,12 +365,12 @@ public class PortfolioView extends Div {
 
         Span cashDot = new Span();
         cashDot.addClassName("st-legend-dot");
-        cashDot.getStyle().set("background-color", "var(--st-blue)");
+        cashDot.getStyle().set("background-color", "var(--st-copper)");
         Span cashLabel = new Span(cashDot, new Span("Cash Reserve (" + currencyFormat.format(summary.cash) + ")"));
 
         Span eqDot = new Span();
         eqDot.addClassName("st-legend-dot");
-        eqDot.getStyle().set("background-color", "var(--st-green)");
+        eqDot.getStyle().set("background-color", "var(--st-jade)");
         Span eqLabel = new Span(eqDot, new Span("Equity Allocation (" + currencyFormat.format(summary.totalCurrentValue) + ")"));
 
         legend.add(cashLabel, eqLabel);
@@ -354,15 +378,14 @@ public class PortfolioView extends Div {
     }
 
     private void openSellDialog(PortfolioService.HoldingRow row) {
-        AuthUser user = securityService.getAuthenticatedUser();
-        if (user == null) {
+        if (currentUser == null) {
             Notification.show("Please log in to trade.");
             return;
         }
 
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle("Sell Order · " + row.symbol);
-        dialog.setWidth("min(420px, 94vw)");
+        dialog.setWidth("min(400px, 94vw)");
 
         VerticalLayout layout = new VerticalLayout();
         layout.setPadding(false);
@@ -370,7 +393,7 @@ public class PortfolioView extends Div {
         layout.setWidthFull();
 
         Span companySpan = new Span(row.companyName);
-        companySpan.getStyle().set("font-size", "13px").set("color", "var(--st-text-secondary)").set("margin-bottom", "14px").set("display", "block");
+        companySpan.getStyle().set("font-size", "12px").set("color", "var(--st-text-secondary)").set("margin-bottom", "12px").set("display", "block");
 
         // Available Shares
         Div sharesRow = new Div();
@@ -398,7 +421,7 @@ public class PortfolioView extends Div {
         qtyField.setValue(1);
         qtyField.setRequiredIndicatorVisible(true);
         qtyField.setWidthFull();
-        qtyField.getStyle().set("margin-top", "12px");
+        qtyField.getStyle().set("margin-top", "10px");
 
         // Estimated proceeds
         Div estDiv = new Div();
@@ -418,7 +441,7 @@ public class PortfolioView extends Div {
             }
         });
 
-        Span note = new Span("Proceeds will be credited to your available cash upon execution.");
+        Span note = new Span("Proceeds will be credited to settled available cash upon execution.");
         note.addClassName("st-dialog-note");
 
         layout.add(companySpan, sharesRow, priceRow, qtyField, estDiv, note);
@@ -443,7 +466,7 @@ public class PortfolioView extends Div {
             confirmBtn.setText("Executing...");
 
             try {
-                Trade trade = tradingService.sell(user.getId(), row.stockId, qty);
+                Trade trade = tradingService.sell(currentUser.getId(), row.stockId, qty);
                 Notification.show("Executed SELL: " + trade.getQuantity() + " shares of " + trade.getStockSymbol() +
                                 " at " + currencyFormat.format(trade.getPrice()) + " (Total: " + currencyFormat.format(trade.getTotalAmount()) + ")",
                         5000, Notification.Position.BOTTOM_CENTER)

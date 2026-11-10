@@ -1,5 +1,6 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
 import com.project.trading.model.AuthUser;
@@ -10,7 +11,9 @@ import com.project.trading.service.PortfolioService;
 import com.project.trading.service.StockService;
 import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -31,6 +34,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
+import com.vaadin.flow.shared.Registration;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -39,7 +43,6 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Route(value = "ui/market", layout = MainLayout.class)
-@RouteAlias(value = "ui", layout = MainLayout.class)
 @PageTitle("Market Quotes | SimTrade")
 public class MarketView extends Div {
 
@@ -57,6 +60,9 @@ public class MarketView extends Div {
     private final Span stockCountValue;
     private final Div emptyState;
     private final Div tableContainer;
+
+    private Registration priceListenerRegistration;
+    private Registration tradeListenerRegistration;
 
     private static final String SVG_SEARCH = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z\" /></svg>";
 
@@ -166,7 +172,7 @@ public class MarketView extends Div {
             price.addClassName("tabular-num");
             price.getStyle().set("font-weight", "600");
             return price;
-        }).setHeader("Last Price").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+        }).setHeader("Last Traded Price (LTP)").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(stock -> {
             double changePct = stock.getChangePercentAsDouble();
@@ -182,7 +188,7 @@ public class MarketView extends Div {
             }
             changeSpan.getStyle().set("font-weight", "600").set("font-size", "12px");
             return changeSpan;
-        }).setHeader("Change").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+        }).setHeader("24h Change").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(stock -> {
             Button buyBtn = new Button("Buy");
@@ -191,7 +197,7 @@ public class MarketView extends Div {
             buyBtn.getStyle().set("height", "28px").set("font-size", "12px").set("padding", "0 12px");
             buyBtn.addClickListener(e -> openBuyDialog(stock));
             return buyBtn;
-        }).setHeader("Action").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+        }).setHeader("Trade").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         tableContainer = new Div(grid);
         tableContainer.addClassName("st-table-surface");
@@ -200,13 +206,47 @@ public class MarketView extends Div {
 
         updateList();
         updateSummary();
+    }
 
-        // Real-time polling listener
-        UI.getCurrent().setPollInterval(1000);
-        UI.getCurrent().addPollListener(e -> {
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        UI ui = attachEvent.getUI();
+
+        // Immediate fresh sync
+        updateList();
+        updateSummary();
+
+        // Subscribe to live multi-symbol price broadcasts
+        priceListenerRegistration = MarketDataBroadcaster.registerPriceListener(event -> {
+            ui.access(this::updateList);
+        });
+
+        // Subscribe to live order executions to update available liquidity
+        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(trade -> {
+            ui.access(this::updateSummary);
+        });
+
+        // Controlled 3-second fallback polling
+        ui.setPollInterval(3000);
+        ui.addPollListener(e -> {
             updateList();
             updateSummary();
         });
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (priceListenerRegistration != null) {
+            priceListenerRegistration.remove();
+            priceListenerRegistration = null;
+        }
+        if (tradeListenerRegistration != null) {
+            tradeListenerRegistration.remove();
+            tradeListenerRegistration = null;
+        }
+        detachEvent.getUI().setPollInterval(-1);
+        super.onDetach(detachEvent);
     }
 
     private Component createSvgIcon(String svgData, String size) {
@@ -292,7 +332,7 @@ public class MarketView extends Div {
         // Price row
         Div priceRow = new Div();
         priceRow.addClassName("st-dialog-row");
-        Span priceLabel = new Span("Current Execution Price");
+        Span priceLabel = new Span("Indicative Price (LTP)");
         priceLabel.addClassName("st-dialog-row-label");
         Span priceValue = new Span(currencyFormat.format(stock.getPrice()));
         priceValue.addClassName("st-dialog-row-value");
@@ -367,7 +407,7 @@ public class MarketView extends Div {
             }
         });
 
-        Span note = new Span("Execution price is settled on the server at time of receipt.");
+        Span note = new Span("Settlement Notice: Execution price is settled on the server at time of receipt.");
         note.addClassName("st-dialog-note");
 
         layout.add(companySpan, priceRow, cashRow, qtyField, estDiv, note);
@@ -377,7 +417,7 @@ public class MarketView extends Div {
         cancelBtn.addClassNames("st-btn", "st-btn-secondary");
         cancelBtn.getElement().removeAttribute("theme");
 
-        Button confirmBtn = new Button("Execute Buy");
+        Button confirmBtn = new Button("Execute Buy Order");
         confirmBtn.addClassNames("st-btn", "st-btn-buy");
         confirmBtn.getElement().removeAttribute("theme");
 

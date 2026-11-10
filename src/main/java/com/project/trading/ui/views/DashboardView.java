@@ -1,11 +1,15 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.model.AuthUser;
 import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
 import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -17,6 +21,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.router.RouterLink;
 
 import java.math.BigDecimal;
@@ -27,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Route(value = "ui/dashboard", layout = MainLayout.class)
+@RouteAlias(value = "", layout = MainLayout.class)
 @PageTitle("Terminal Overview | SimTrade")
 public class DashboardView extends VerticalLayout {
 
@@ -37,6 +43,24 @@ public class DashboardView extends VerticalLayout {
     private final NumberFormat percentFormat = NumberFormat.getPercentInstance(new Locale("en", "IN"));
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm");
 
+    private AuthUser currentUser;
+    private MarketDataBroadcaster.Registration broadcastRegistration;
+
+    // Live KPI spans
+    private final Span netWorthValue = new Span("-");
+    private final Span netWorthSubtext = new Span();
+    private final Span cashValue = new Span("-");
+    private final Span holdingsValue = new Span("-");
+    private final Span holdingsSubtext = new Span();
+    private final Span overallPnlValue = new Span("-");
+    private final Span realizedPnlValue = new Span("-");
+    private final Span unrealizedPnlValue = new Span("-");
+
+    // Dynamic containers
+    private final Div allocationContainer = new Div();
+    private final Div recentTradesContainer = new Div();
+    private final Div activePositionsContainer = new Div();
+
     public DashboardView() {
         this.percentFormat.setMinimumFractionDigits(2);
         this.percentFormat.setMaximumFractionDigits(2);
@@ -46,46 +70,122 @@ public class DashboardView extends VerticalLayout {
         setPadding(false);
         setSpacing(false);
 
-        AuthUser user = securityService.getAuthenticatedUser();
-        if (user == null) {
-            return; // AuthInitListener handles redirect
+        currentUser = securityService.getAuthenticatedUser();
+        if (currentUser == null) {
+            return;
         }
 
+        add(createHeader(currentUser));
+        add(createMetricsGrid());
+        add(createAllocationSection());
+
+        HorizontalLayout splitSection = new HorizontalLayout();
+        splitSection.setWidthFull();
+        splitSection.setSpacing(true);
+        splitSection.getStyle().set("margin-top", "12px").set("flex-wrap", "wrap");
+
+        Component recentTradesSection = createRecentTradesSection();
+        Component portfolioSnapshot = createPortfolioSnapshot();
+
+        splitSection.add(recentTradesSection, portfolioSnapshot);
+        splitSection.setFlexGrow(3, recentTradesSection);
+        splitSection.setFlexGrow(2, portfolioSnapshot);
+
+        add(splitSection);
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        UI ui = attachEvent.getUI();
+
+        // Refresh immediately on attach
+        refreshDashboardData();
+
+        // Register to centralized market broadcaster for real-time price & trade events
+        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+            @Override
+            public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
+                ui.access(() -> refreshDashboardData());
+            }
+
+            @Override
+            public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
+                if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
+                    ui.access(() -> refreshDashboardData());
+                }
+            }
+        });
+
+        // Set controlled 3-second fallback polling interval
+        ui.setPollInterval(3000);
+        ui.addPollListener(e -> refreshDashboardData());
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (broadcastRegistration != null) {
+            broadcastRegistration.remove();
+            broadcastRegistration = null;
+        }
+        detachEvent.getUI().setPollInterval(-1); // Disable polling on leave
+        super.onDetach(detachEvent);
+    }
+
+    private synchronized void refreshDashboardData() {
+        if (currentUser == null) return;
         try {
-            PortfolioService.PortfolioSummary summary = portfolioService.buildSummary(
-                    portfolioService.getPortfolioForUser(user.getId()));
-            List<Trade> recentTrades = tradingService.getHistory(user.getId(), 5);
+            PortfolioService.PortfolioSummary summary = portfolioService.getSummaryForUser(currentUser.getId());
+            List<Trade> recentTrades = tradingService.getHistory(currentUser.getId(), 5);
 
-            // Header Group
-            add(createHeader(user));
+            // 1. Total Net Worth
+            netWorthValue.setText(currencyFormat.format(summary.netWorth));
+            String pnlSign = summary.isOverallPositive() ? "+" : "";
+            netWorthSubtext.setText(pnlSign + percentFormat.format(summary.totalReturnPct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)) + " return");
 
-            // 6-Card Institutional Stat Grid
-            add(createMetricsGrid(summary));
+            // 2. Available Cash
+            cashValue.setText(currencyFormat.format(summary.cash));
 
-            // Capital Allocation Bar
-            add(createAllocationBar(summary));
+            // 3. Current Holdings Value
+            holdingsValue.setText(currencyFormat.format(summary.totalCurrentValue));
+            holdingsSubtext.setText("Cost: " + currencyFormat.format(summary.totalInvested));
 
-            // Split Layout: Recent Trades & Active Positions
-            HorizontalLayout splitSection = new HorizontalLayout();
-            splitSection.setWidthFull();
-            splitSection.setSpacing(true);
-            splitSection.getStyle().set("margin-top", "16px").set("flex-wrap", "wrap");
+            // 4. Overall P&L
+            String overallSign = summary.overallPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+            overallPnlValue.setText(overallSign + currencyFormat.format(summary.overallPnl));
+            setPnlColor(overallPnlValue, summary.overallPnl);
 
-            Component recentTradesSection = createRecentTradesSection(recentTrades);
-            Component portfolioSnapshot = createPortfolioSnapshot(summary);
+            // 5. Realized P&L
+            String realizedSign = summary.realizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+            realizedPnlValue.setText(realizedSign + currencyFormat.format(summary.realizedPnl));
+            setPnlColor(realizedPnlValue, summary.realizedPnl);
 
-            splitSection.add(recentTradesSection, portfolioSnapshot);
-            splitSection.setFlexGrow(3, recentTradesSection);
-            splitSection.setFlexGrow(2, portfolioSnapshot);
+            // 6. Unrealized P&L
+            String unrealizedSign = summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+            unrealizedPnlValue.setText(unrealizedSign + currencyFormat.format(summary.totalUnrealizedPnl));
+            setPnlColor(unrealizedPnlValue, summary.totalUnrealizedPnl);
 
-            add(splitSection);
+            // Update Allocation Bar
+            updateAllocationBar(summary);
+
+            // Update Recent Trades
+            updateRecentTrades(recentTrades);
+
+            // Update Active Positions
+            updateActivePositions(summary);
+
         } catch (Exception e) {
-            Div errContainer = new Div();
-            errContainer.addClassName("st-empty-state");
-            Paragraph error = new Paragraph("Unable to load terminal data: " + e.getMessage());
-            error.addClassName("st-negative");
-            errContainer.add(error);
-            add(errContainer);
+            // Keep existing displayed state if a transient query error occurs
+        }
+    }
+
+    private void setPnlColor(Span span, BigDecimal value) {
+        span.removeClassName("st-positive");
+        span.removeClassName("st-negative");
+        if (value.compareTo(BigDecimal.ZERO) > 0) {
+            span.addClassName("st-positive");
+        } else if (value.compareTo(BigDecimal.ZERO) < 0) {
+            span.addClassName("st-negative");
         }
     }
 
@@ -103,12 +203,11 @@ public class DashboardView extends VerticalLayout {
         H1 title = new H1("Overview · " + formattedUsername);
         title.addClassName("st-page-title");
 
-        Paragraph subtitle = new Paragraph("Institutional paper-trading account overview and positions summary.");
+        Paragraph subtitle = new Paragraph("Live paper trading capital, position valuations and order telemetry.");
         subtitle.addClassName("st-page-subtitle");
 
         titleGroup.add(title, subtitle);
 
-        // Header Quick Actions
         HorizontalLayout actions = new HorizontalLayout();
         actions.setSpacing(true);
 
@@ -121,7 +220,7 @@ public class DashboardView extends VerticalLayout {
 
         RouterLink portLink = new RouterLink();
         portLink.setRoute(PortfolioView.class);
-        Button portBtn = new Button("Holdings");
+        Button portBtn = new Button("Holdings & P&L");
         portBtn.addClassNames("st-btn", "st-btn-secondary");
         portBtn.getElement().removeAttribute("theme");
         portLink.add(portBtn);
@@ -132,52 +231,66 @@ public class DashboardView extends VerticalLayout {
         return headerContainer;
     }
 
-    private Component createMetricsGrid(PortfolioService.PortfolioSummary summary) {
+    private Component createMetricsGrid() {
         Div grid = new Div();
         grid.addClassName("st-stats-row");
 
-        // 1. Total Net Worth
-        String pnlSubtext = (summary.isOverallPositive() ? "+" : "") +
-                percentFormat.format(summary.totalReturnPct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-        grid.add(createMetricCard("Total Net Worth", currencyFormat.format(summary.netWorth),
-                summary.isOverallPositive() ? "positive" : "negative", pnlSubtext + " overall return"));
+        // 1. Featured Total Net Worth Card
+        Div netWorthCard = createMetricCardElement("Total Net Worth", netWorthValue, netWorthSubtext);
+        netWorthCard.addClassName("st-stat-card-featured");
+        grid.add(netWorthCard);
 
         // 2. Available Cash
-        grid.add(createMetricCard("Available Cash", currencyFormat.format(summary.cash),
-                "neutral", "Liquid purchasing power"));
+        grid.add(createMetricCardElement("Available Cash", cashValue, new Span("Settled buying power")));
 
         // 3. Current Holdings Value
-        grid.add(createMetricCard("Holdings Value", currencyFormat.format(summary.totalCurrentValue),
-                "neutral", "Cost: " + currencyFormat.format(summary.totalInvested)));
+        grid.add(createMetricCardElement("Holdings Value", holdingsValue, holdingsSubtext));
 
         // 4. Overall P&L
-        String overallSign = summary.overallPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-        grid.add(createMetricCard("Overall P&L", overallSign + currencyFormat.format(summary.overallPnl),
-                summary.isOverallPositive() ? "positive" : "negative", "Realized + Unrealized"));
+        grid.add(createMetricCardElement("Overall P&L", overallPnlValue, new Span("Realized + Unrealized")));
 
         // 5. Realized P&L
-        String realizedSign = summary.realizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-        grid.add(createMetricCard("Realized P&L", realizedSign + currencyFormat.format(summary.realizedPnl),
-                summary.realizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "positive" : "negative", "Closed positions"));
+        grid.add(createMetricCardElement("Realized P&L", realizedPnlValue, new Span("Closed trade gains/losses")));
 
         // 6. Unrealized P&L
-        String unrealizedSign = summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-        grid.add(createMetricCard("Unrealized P&L", unrealizedSign + currencyFormat.format(summary.totalUnrealizedPnl),
-                summary.totalUnrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "positive" : "negative", "Floating positions"));
+        grid.add(createMetricCardElement("Unrealized P&L", unrealizedPnlValue, new Span("Open position floating P&L")));
 
         return grid;
     }
 
-    private Component createAllocationBar(PortfolioService.PortfolioSummary summary) {
-        Div container = new Div();
-        container.addClassName("st-allocation-container");
+    private Div createMetricCardElement(String label, Span valueSpan, Span subtextSpan) {
+        Div card = new Div();
+        card.addClassName("st-stat-card");
+
+        Div header = new Div();
+        header.addClassName("st-stat-header");
+        Span title = new Span(label);
+        title.addClassName("st-stat-label");
+        header.add(title);
+
+        valueSpan.addClassName("st-stat-value");
+        valueSpan.addClassName("tabular-num");
+
+        subtextSpan.addClassName("st-stat-subtext");
+
+        card.add(header, valueSpan, subtextSpan);
+        return card;
+    }
+
+    private Component createAllocationSection() {
+        allocationContainer.addClassName("st-allocation-container");
+        return allocationContainer;
+    }
+
+    private void updateAllocationBar(PortfolioService.PortfolioSummary summary) {
+        allocationContainer.removeAll();
 
         HorizontalLayout top = new HorizontalLayout();
         top.setWidthFull();
         top.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
 
         Span title = new Span("Capital Allocation");
-        title.getStyle().set("font-size", "12px").set("font-weight", "600").set("text-transform", "uppercase").set("letter-spacing", "0.05em").set("color", "var(--st-text-secondary)");
+        title.getStyle().set("font-size", "11px").set("font-weight", "600").set("text-transform", "uppercase").set("letter-spacing", "0.06em").set("color", "var(--st-text-secondary)");
 
         BigDecimal total = summary.netWorth;
         double cashPct = 100.0;
@@ -191,7 +304,7 @@ public class DashboardView extends VerticalLayout {
         }
 
         Span ratioText = new Span(String.format(Locale.US, "Cash: %.1f%%  ·  Equity: %.1f%%", cashPct, equityPct));
-        ratioText.getStyle().set("font-size", "12px").set("color", "var(--st-text-muted)").set("font-feature-settings", "\"tnum\"");
+        ratioText.getStyle().set("font-size", "11px").set("color", "var(--st-text-muted)").set("font-feature-settings", "\"tnum\"");
 
         top.add(title, ratioText);
 
@@ -213,51 +326,22 @@ public class DashboardView extends VerticalLayout {
 
         Span cashDot = new Span();
         cashDot.addClassName("st-legend-dot");
-        cashDot.getStyle().set("background-color", "var(--st-blue)");
-        Span cashLabel = new Span(cashDot, new Span("Available Cash (" + currencyFormat.format(summary.cash) + ")"));
+        cashDot.getStyle().set("background-color", "var(--st-copper)");
+        Span cashLabel = new Span(cashDot, new Span("Cash Reserve (" + currencyFormat.format(summary.cash) + ")"));
 
         Span eqDot = new Span();
         eqDot.addClassName("st-legend-dot");
-        eqDot.getStyle().set("background-color", "var(--st-green)");
+        eqDot.getStyle().set("background-color", "var(--st-jade)");
         Span eqLabel = new Span(eqDot, new Span("Holdings Equity (" + currencyFormat.format(summary.totalCurrentValue) + ")"));
 
         legend.add(cashLabel, eqLabel);
-        container.add(top, bar, legend);
-
-        return container;
+        allocationContainer.add(top, bar, legend);
     }
 
-    private Component createMetricCard(String label, String value, String type, String subtext) {
-        Div card = new Div();
-        card.addClassName("st-stat-card");
-
-        Div header = new Div();
-        header.addClassName("st-stat-header");
-
-        Span title = new Span(label);
-        title.addClassName("st-stat-label");
-        header.add(title);
-
-        Span val = new Span(value);
-        val.addClassName("st-stat-value");
-
-        if ("positive".equals(type)) {
-            val.addClassName("st-positive");
-        } else if ("negative".equals(type)) {
-            val.addClassName("st-negative");
-        }
-
-        Span sub = new Span(subtext);
-        sub.addClassName("st-stat-subtext");
-
-        card.add(header, val, sub);
-        return card;
-    }
-
-    private Component createRecentTradesSection(List<Trade> recentTrades) {
+    private Component createRecentTradesSection() {
         Div section = new Div();
         section.addClassName("st-table-surface");
-        section.getStyle().set("padding", "16px 20px");
+        section.getStyle().set("padding", "14px 16px");
 
         HorizontalLayout secHeader = new HorizontalLayout();
         secHeader.setWidthFull();
@@ -267,43 +351,49 @@ public class DashboardView extends VerticalLayout {
         H2 header = new H2("Recent Executions");
         header.addClassName("st-section-title");
 
-        RouterLink historyLink = new RouterLink("Full Audit Log →", HistoryView.class);
-        historyLink.getStyle().set("font-size", "12px").set("color", "var(--st-blue)").set("text-decoration", "none").set("font-weight", "500");
+        RouterLink historyLink = new RouterLink("Audit Log →", HistoryView.class);
+        historyLink.getStyle().set("font-size", "11px").set("color", "var(--st-copper)").set("text-decoration", "none").set("font-weight", "500");
 
         secHeader.add(header, historyLink);
-        section.add(secHeader);
+        section.add(secHeader, recentTradesContainer);
+        return section;
+    }
+
+    private void updateRecentTrades(List<Trade> recentTrades) {
+        recentTradesContainer.removeAll();
 
         if (recentTrades == null || recentTrades.isEmpty()) {
             Div emptyState = new Div();
             emptyState.addClassName("st-empty-state");
 
             Span icon = new Span();
-            icon.getElement().setProperty("innerHTML", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" /></svg>");
+            icon.getElement().setProperty("innerHTML", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" /></svg>");
 
-            H2 emptyTitle = new H2("No executed trades");
+            H2 emptyTitle = new H2("No executed trades yet");
             emptyTitle.addClassName("st-empty-title");
 
-            Paragraph emptyMsg = new Paragraph("No simulated trades have been placed yet. Explore listed stocks to execute an order.");
+            Paragraph emptyMsg = new Paragraph("Select an equity instrument to place your first simulated market order.");
             emptyMsg.addClassName("st-empty-text");
 
-            RouterLink marketLink = new RouterLink("Explore Market Quotes", MarketView.class);
+            RouterLink marketLink = new RouterLink("Browse Market Quotes", MarketView.class);
             marketLink.addClassNames("st-btn", "st-btn-primary");
+            marketLink.getElement().removeAttribute("theme");
 
             emptyState.add(icon, emptyTitle, emptyMsg, marketLink);
-            section.add(emptyState);
+            recentTradesContainer.add(emptyState);
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "12px");
+            tableContainer.getStyle().set("margin-top", "8px");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
             tableHeader.getStyle().set("border-bottom", "1px solid var(--st-border)")
-                    .set("padding", "8px 0")
+                    .set("padding", "6px 0")
                     .set("font-weight", "600")
-                    .set("font-size", "11px")
+                    .set("font-size", "10px")
                     .set("text-transform", "uppercase")
-                    .set("letter-spacing", "0.05em")
+                    .set("letter-spacing", "0.06em")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
@@ -319,9 +409,9 @@ public class DashboardView extends VerticalLayout {
             for (Trade trade : recentTrades) {
                 HorizontalLayout row = new HorizontalLayout();
                 row.setWidthFull();
-                row.getStyle().set("padding", "10px 0")
+                row.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
-                        .set("font-size", "13px");
+                        .set("font-size", "12px");
                 row.setAlignItems(FlexComponent.Alignment.CENTER);
 
                 String dateStr = dateFormat.format(trade.getExecutedAt());
@@ -355,15 +445,14 @@ public class DashboardView extends VerticalLayout {
                 );
                 tableContainer.add(row);
             }
-            section.add(tableContainer);
+            recentTradesContainer.add(tableContainer);
         }
-        return section;
     }
 
-    private Component createPortfolioSnapshot(PortfolioService.PortfolioSummary summary) {
+    private Component createPortfolioSnapshot() {
         Div section = new Div();
         section.addClassName("st-table-surface");
-        section.getStyle().set("padding", "16px 20px");
+        section.getStyle().set("padding", "14px 16px");
 
         HorizontalLayout secHeader = new HorizontalLayout();
         secHeader.setWidthFull();
@@ -373,40 +462,45 @@ public class DashboardView extends VerticalLayout {
         H2 header = new H2("Active Positions");
         header.addClassName("st-section-title");
 
-        RouterLink portLink = new RouterLink("Manage →", PortfolioView.class);
-        portLink.getStyle().set("font-size", "12px").set("color", "var(--st-blue)").set("text-decoration", "none").set("font-weight", "500");
+        RouterLink portLink = new RouterLink("Manage Holdings →", PortfolioView.class);
+        portLink.getStyle().set("font-size", "11px").set("color", "var(--st-copper)").set("text-decoration", "none").set("font-weight", "500");
 
         secHeader.add(header, portLink);
-        section.add(secHeader);
+        section.add(secHeader, activePositionsContainer);
+        return section;
+    }
+
+    private void updateActivePositions(PortfolioService.PortfolioSummary summary) {
+        activePositionsContainer.removeAll();
 
         if (summary.rows.isEmpty()) {
             Div empty = new Div();
             empty.addClassName("st-empty-state");
-            empty.getStyle().set("padding", "28px 12px");
+            empty.getStyle().set("padding", "20px 12px");
             Span msg = new Span("No open equity positions held.");
-            msg.getStyle().set("color", "var(--st-text-muted)").set("font-size", "13px");
+            msg.getStyle().set("color", "var(--st-text-muted)").set("font-size", "12px");
             empty.add(msg);
-            section.add(empty);
+            activePositionsContainer.add(empty);
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "12px");
+            tableContainer.getStyle().set("margin-top", "8px");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
             tableHeader.getStyle().set("border-bottom", "1px solid var(--st-border)")
-                    .set("padding", "8px 0")
+                    .set("padding", "6px 0")
                     .set("font-weight", "600")
-                    .set("font-size", "11px")
+                    .set("font-size", "10px")
                     .set("text-transform", "uppercase")
-                    .set("letter-spacing", "0.05em")
+                    .set("letter-spacing", "0.06em")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
                     createCell("Symbol", 2),
                     createCell("Shares", 1),
                     createCell("Value", 2),
-                    createCell("Unrealized P&L", 2)
+                    createCell("Unrealized Return", 2)
             );
             tableContainer.add(tableHeader);
 
@@ -415,9 +509,9 @@ public class DashboardView extends VerticalLayout {
                 PortfolioService.HoldingRow row = summary.rows.get(i);
                 HorizontalLayout posRow = new HorizontalLayout();
                 posRow.setWidthFull();
-                posRow.getStyle().set("padding", "10px 0")
+                posRow.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
-                        .set("font-size", "13px");
+                        .set("font-size", "12px");
                 posRow.setAlignItems(FlexComponent.Alignment.CENTER);
 
                 Span sym = new Span(row.symbol);
@@ -432,11 +526,7 @@ public class DashboardView extends VerticalLayout {
                 String sign = row.unrealizedPnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
                 Span pnl = new Span(sign + currencyFormat.format(row.unrealizedPnl));
                 pnl.addClassName("tabular-num");
-                if (row.unrealizedPnl.compareTo(BigDecimal.ZERO) > 0) {
-                    pnl.addClassName("st-positive");
-                } else if (row.unrealizedPnl.compareTo(BigDecimal.ZERO) < 0) {
-                    pnl.addClassName("st-negative");
-                }
+                setPnlColor(pnl, row.unrealizedPnl);
 
                 posRow.add(
                         createCell(sym, 2),
@@ -446,10 +536,8 @@ public class DashboardView extends VerticalLayout {
                 );
                 tableContainer.add(posRow);
             }
-            section.add(tableContainer);
+            activePositionsContainer.add(tableContainer);
         }
-
-        return section;
     }
 
     private Component createCell(String text, int flexGrow) {

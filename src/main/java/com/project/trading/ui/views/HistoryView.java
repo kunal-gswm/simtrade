@@ -1,11 +1,15 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.exception.DataAccessException;
 import com.project.trading.model.AuthUser;
 import com.project.trading.model.Trade;
 import com.project.trading.service.TradingService;
 import com.project.trading.ui.security.SecurityService;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
@@ -16,6 +20,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.shared.Registration;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -39,6 +44,8 @@ public class HistoryView extends Div {
     private final Span totalVolumeValue;
     private final Div emptyState;
     private final Div tableContainer;
+
+    private Registration tradeListenerRegistration;
 
     private static final String SVG_HISTORY = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" /></svg>";
 
@@ -154,6 +161,31 @@ public class HistoryView extends Div {
         add(headerContainer, tableContainer, emptyState);
 
         loadData();
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        UI ui = attachEvent.getUI();
+        loadData();
+
+        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(trade -> {
+            ui.access(this::loadData);
+        });
+
+        // Controlled 3-second fallback polling
+        ui.setPollInterval(3000);
+        ui.addPollListener(e -> loadData());
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (tradeListenerRegistration != null) {
+            tradeListenerRegistration.remove();
+            tradeListenerRegistration = null;
+        }
+        detachEvent.getUI().setPollInterval(-1);
+        super.onDetach(detachEvent);
     }
 
     private Component createSvgIcon(String svgData, String size) {

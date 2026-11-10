@@ -107,13 +107,13 @@ public class ProfileView extends Div {
             try {
                 userService.updateProfile(currentUser.getId(), fullNameField.getValue(), emailField.getValue());
                 profileMsg.setText("Profile updated successfully.");
-                profileMsg.getStyle().set("color", "var(--st-green)").set("display", "block");
+                profileMsg.getStyle().set("color", "var(--st-jade)").set("display", "block");
             } catch (ValidationException ex) {
                 profileMsg.setText(ex.getMessage());
-                profileMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
+                profileMsg.getStyle().set("color", "var(--st-coral)").set("display", "block");
             } catch (Exception ex) {
                 profileMsg.setText("Failed to update profile.");
-                profileMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
+                profileMsg.getStyle().set("color", "var(--st-coral)").set("display", "block");
             }
         });
 
@@ -144,23 +144,23 @@ public class ProfileView extends Div {
 
             if (!newPasswordField.getValue().equals(confirmNewPasswordField.getValue())) {
                 pwdMsg.setText("New passwords do not match.");
-                pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
+                pwdMsg.getStyle().set("color", "var(--st-coral)").set("display", "block");
                 return;
             }
 
             try {
                 userService.changePassword(currentUser.getId(), currentPasswordField.getValue(), newPasswordField.getValue());
                 pwdMsg.setText("Password successfully changed.");
-                pwdMsg.getStyle().set("color", "var(--st-green)").set("display", "block");
+                pwdMsg.getStyle().set("color", "var(--st-jade)").set("display", "block");
                 currentPasswordField.clear();
                 newPasswordField.clear();
                 confirmNewPasswordField.clear();
             } catch (ValidationException | AuthenticationException ex) {
                 pwdMsg.setText(ex.getMessage());
-                pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
+                pwdMsg.getStyle().set("color", "var(--st-coral)").set("display", "block");
             } catch (Exception ex) {
                 pwdMsg.setText("Failed to update password.");
-                pwdMsg.getStyle().set("color", "var(--st-red)").set("display", "block");
+                pwdMsg.getStyle().set("color", "var(--st-coral)").set("display", "block");
             }
         });
 

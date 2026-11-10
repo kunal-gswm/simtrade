@@ -109,7 +109,7 @@ public class LoginView extends Div {
         loginButton.addClickShortcut(Key.ENTER);
 
         RouterLink registerLink = new RouterLink("Create a new trader account →", RegistrationView.class);
-        registerLink.getStyle().set("font-size", "13px").set("display", "block").set("text-align", "center").set("margin-top", "12px").set("color", "var(--st-blue)").set("text-decoration", "none");
+        registerLink.getStyle().set("font-size", "13px").set("display", "block").set("text-align", "center").set("margin-top", "12px").set("color", "var(--st-copper)").set("text-decoration", "none");
 
         VerticalLayout fields = new VerticalLayout(username, password, errorMsg, loginButton, registerLink);
         fields.setPadding(false);

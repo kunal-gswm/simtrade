@@ -140,7 +140,7 @@ public class RegistrationView extends Div {
         registerButton.addClickShortcut(Key.ENTER);
 
         RouterLink loginLink = new RouterLink("Already registered? Sign in →", LoginView.class);
-        loginLink.getStyle().set("font-size", "13px").set("display", "block").set("margin-top", "14px").set("text-align", "center").set("color", "var(--st-blue)").set("text-decoration", "none");
+        loginLink.getStyle().set("font-size", "13px").set("display", "block").set("margin-top", "14px").set("text-align", "center").set("color", "var(--st-copper)").set("text-decoration", "none");
 
         VerticalLayout fields = new VerticalLayout(fullName, username, email, password, confirmPassword, errorMsg, successMsg, registerButton, loginLink);
         fields.setPadding(false);
@@ -161,7 +161,7 @@ public class RegistrationView extends Div {
         item.addClassName("st-login-feature-item");
         Span icon = new Span();
         icon.getElement().setProperty("innerHTML", SVG_CHECK);
-        icon.getStyle().set("width", "16px").set("height", "16px").set("display", "inline-flex").set("color", "var(--st-green)");
+        icon.getStyle().set("width", "16px").set("height", "16px").set("display", "inline-flex").set("color", "var(--st-jade)");
         Span label = new Span(text);
         item.add(icon, label);
         return item;

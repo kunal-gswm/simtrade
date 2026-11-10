@@ -1,5 +1,6 @@
 package com.project.trading.service;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.dao.TradeDAO;
 import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
@@ -32,6 +33,8 @@ public class TradingService {
                 c.setAutoCommit(false);
                 Trade trade = executor.execute(c, userId, stockId, qty);
                 c.commit();
+                // Immediately broadcast settled transaction to update connected user sessions
+                MarketDataBroadcaster.broadcastTrade(trade);
                 return trade;
             } catch (AppException e) {
                 rollbackQuietly(c);
@@ -63,8 +66,7 @@ public class TradingService {
         if (c != null) {
             try {
                 c.rollback();
-            } catch (SQLException e) {
-                System.err.println("Rollback failed: " + e.getMessage());
+            } catch (SQLException ignored) {
             }
         }
     }
@@ -77,11 +79,7 @@ public class TradingService {
         }
     }
 
-    public List<Trade> getRecentTrades(int limit) {
-        try (Connection c = DBConnection.getConnection()) {
-            return tradeDAO.findRecent(c, limit);
-        } catch (SQLException e) {
-            throw new DataAccessException("Failed to fetch recent trades.", e);
-        }
+    public List<Trade> getHistory(long userId) {
+        return getHistory(userId, 100);
     }
 }
