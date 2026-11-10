@@ -1,5 +1,6 @@
 package com.project.trading.simulator;
 
+import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.dao.StockDAO;
 import com.project.trading.model.Stock;
 import com.project.trading.util.DBConnection;
@@ -41,7 +42,7 @@ public class PriceSimulator {
                     return t;
                 }
             });
-            int interval = intervalSec <= 0 ? 5 : intervalSec;
+            int interval = intervalSec <= 0 ? 3 : intervalSec;
             scheduler.scheduleAtFixedRate(this::tick, interval, interval, TimeUnit.SECONDS);
         }
     }
@@ -65,18 +66,20 @@ public class PriceSimulator {
 
     private void tick() {
         try {
+            Map<Long, BigDecimal> newPrices = new HashMap<>();
             try (Connection c = DBConnection.getConnection()) {
                 List<Stock> activeStocks = stockDAO.findAllActive(c);
                 if (activeStocks == null || activeStocks.isEmpty()) {
                     return;
                 }
-                Map<Long, BigDecimal> newPrices = new HashMap<>();
                 for (Stock stock : activeStocks) {
                     BigDecimal nextPrice = priceGenerator.next(stock.getPrice());
                     newPrices.put(stock.getId(), nextPrice);
                 }
                 stockDAO.updatePricesBatch(c, newPrices);
             }
+            // Notify live Vaadin sessions and listeners after batch persistence
+            MarketDataBroadcaster.broadcastPrices(newPrices);
         } catch (Throwable t) {
             // Uncaught exception silently cancels all future runs of a scheduled task; catch Throwable explicitly
             System.err.println("[PriceSimulator] Tick error: " + t.getMessage());

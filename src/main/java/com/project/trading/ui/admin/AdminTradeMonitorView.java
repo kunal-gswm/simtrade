@@ -2,9 +2,14 @@ package com.project.trading.ui.admin;
 
 import com.project.trading.model.Trade;
 import com.project.trading.service.AdminService;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -15,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Route(value = "admin/monitor", layout = AdminLayout.class)
-@PageTitle("Trade Monitor | Admin")
+@PageTitle("Global Trade Monitor | SimTrade Admin")
 public class AdminTradeMonitorView extends VerticalLayout {
 
     private final AdminService adminService = new AdminService();
@@ -24,45 +29,91 @@ public class AdminTradeMonitorView extends VerticalLayout {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss");
 
     public AdminTradeMonitorView() {
+        addClassName("st-page");
         setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        setPadding(false);
+        setSpacing(false);
 
-        H1 title = new H1("Global Trade Monitor");
-        title.getStyle().set("margin-top", "0").set("color", "var(--st-text-main)");
+        Div headerContainer = new Div();
+        headerContainer.addClassName("st-header-container");
+
+        Div titleGroup = new Div();
+        titleGroup.addClassName("st-page-title-group");
+
+        H1 title = new H1("Global Trade Telemetry & Monitor");
+        title.addClassName("st-page-title");
+        Paragraph subtitle = new Paragraph("Live order book settlement stream across all system users.");
+        subtitle.addClassName("st-page-subtitle");
+
+        titleGroup.add(title, subtitle);
+
+        Button refreshBtn = new Button("Refresh Stream", e -> loadData());
+        refreshBtn.addClassNames("st-btn", "st-btn-secondary");
+        refreshBtn.getElement().removeAttribute("theme");
+
+        headerContainer.add(titleGroup, refreshBtn);
+        add(headerContainer);
 
         configureGrid();
-        
-        add(title, grid);
-        
+
+        Div tableSurface = new Div(grid);
+        tableSurface.addClassName("st-table-surface");
+        tableSurface.setWidthFull();
+
+        add(tableSurface);
+
         loadData();
     }
 
     private void configureGrid() {
-        grid.addColumn(trade -> dateFormat.format(trade.getExecutedAt())).setHeader("Timestamp").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Trade::getUsername).setHeader("User").setSortable(true);
-        grid.addColumn(Trade::getStockSymbol).setHeader("Stock").setSortable(true);
-        
+        grid.addComponentColumn(trade -> {
+            Span time = new Span(dateFormat.format(trade.getExecutedAt()));
+            time.addClassName("tabular-num");
+            return time;
+        }).setHeader("Execution Timestamp").setSortable(true).setAutoWidth(true);
+
+        grid.addColumn(Trade::getUsername).setHeader("Trader Account").setSortable(true).setAutoWidth(true);
+
+        grid.addComponentColumn(trade -> {
+            Span symbol = new Span(trade.getStockSymbol());
+            symbol.addClassName("st-symbol");
+            return symbol;
+        }).setHeader("Symbol").setSortable(true).setAutoWidth(true);
+
         grid.addComponentColumn(trade -> {
             Span typeSpan = new Span(trade.getType().name());
-            typeSpan.getStyle().set("padding", "4px 8px").set("border-radius", "4px").set("font-size", "0.85rem").set("font-weight", "500");
-            if (trade.getType().name().equals("BUY")) {
-                typeSpan.getStyle().set("background", "rgba(16, 185, 129, 0.1)").set("color", "var(--st-success-color)");
+            typeSpan.addClassName("st-badge");
+            if ("BUY".equalsIgnoreCase(trade.getType().name())) {
+                typeSpan.addClassName("st-badge-buy");
             } else {
-                typeSpan.getStyle().set("background", "rgba(239, 68, 68, 0.1)").set("color", "var(--st-danger-color)");
+                typeSpan.addClassName("st-badge-sell");
             }
             return typeSpan;
-        }).setHeader("Type").setSortable(true);
-        
-        grid.addColumn(Trade::getQuantity).setHeader("Quantity").setSortable(true);
-        grid.addColumn(trade -> currencyFormat.format(trade.getPrice())).setHeader("Execution Price").setSortable(true);
-        grid.addColumn(trade -> currencyFormat.format(trade.getTotalAmount())).setHeader("Total Value").setSortable(true);
+        }).setHeader("Side").setSortable(true).setAutoWidth(true);
 
-        grid.addThemeName("row-stripes");
+        grid.addComponentColumn(trade -> {
+            Span qty = new Span(String.valueOf(trade.getQuantity()));
+            qty.addClassName("tabular-num");
+            return qty;
+        }).setHeader("Shares").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(trade -> {
+            Span price = new Span(currencyFormat.format(trade.getPrice()));
+            price.addClassName("tabular-num");
+            return price;
+        }).setHeader("Execution Price").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(trade -> {
+            Span total = new Span(currencyFormat.format(trade.getTotalAmount()));
+            total.addClassName("tabular-num");
+            total.getStyle().set("font-weight", "600");
+            return total;
+        }).setHeader("Settled Amount").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.setAllRowsVisible(true);
     }
 
     private void loadData() {
-        // Load latest 200 trades across all users
         List<Trade> recentTrades = adminService.getRecentTrades(200);
         grid.setItems(recentTrades);
     }
