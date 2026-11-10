@@ -34,6 +34,39 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         setPrimarySection(Section.DRAWER);
         createNavbar();
         createDrawer();
+        setupResponsiveEngine();
+    }
+
+    private void setupResponsiveEngine() {
+        getElement().executeJs(
+            "const al = this;" +
+            "const syncMode = () => {" +
+            "  const isMobile = window.innerWidth <= 1024;" +
+            "  if (isMobile) {" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'true');" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '0px');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(true);" +
+            "    else al.setAttribute('overlay', '');" +
+            "    if (!al.__mobileInitialized) {" +
+            "      al.__mobileInitialized = true;" +
+            "      al.drawerOpened = false;" +
+            "    }" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  } else {" +
+            "    al.__mobileInitialized = false;" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'false');" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '260px');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(false);" +
+            "    else al.removeAttribute('overlay');" +
+            "    al.drawerOpened = true;" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  }" +
+            "};" +
+            "window.addEventListener('resize', syncMode);" +
+            "requestAnimationFrame(syncMode);" +
+            "setTimeout(syncMode, 60);" +
+            "setTimeout(syncMode, 300);"
+        );
     }
 
     private void createNavbar() {
@@ -171,7 +204,13 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         if (isOverlay()) {
             setDrawerOpened(false);
         }
-        UI.getCurrent().getPage().executeJs("window.dispatchEvent(new CustomEvent('close-overlay-drawer'));");
+        UI.getCurrent().getPage().executeJs(
+            "if (window.innerWidth <= 1024) {" +
+            "  const al = document.querySelector('vaadin-app-layout');" +
+            "  if (al) al.drawerOpened = false;" +
+            "  window.dispatchEvent(new CustomEvent('close-overlay-drawer'));" +
+            "}"
+        );
 
         String currentPath = event.getLocation().getPath();
         for (RouterLink link : navLinks) {
