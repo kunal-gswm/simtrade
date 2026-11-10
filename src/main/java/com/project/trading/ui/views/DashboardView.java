@@ -82,10 +82,13 @@ public class DashboardView extends VerticalLayout {
         HorizontalLayout splitSection = new HorizontalLayout();
         splitSection.setWidthFull();
         splitSection.setSpacing(true);
-        splitSection.getStyle().set("margin-top", "12px").set("flex-wrap", "wrap");
+        splitSection.addClassName("st-split-section");
+        splitSection.getStyle().set("margin-top", "12px");
 
         Component recentTradesSection = createRecentTradesSection();
         Component portfolioSnapshot = createPortfolioSnapshot();
+        recentTradesSection.getStyle().set("min-width", "0");
+        portfolioSnapshot.getStyle().set("min-width", "0");
 
         splitSection.add(recentTradesSection, portfolioSnapshot);
         splitSection.setFlexGrow(3, recentTradesSection);
@@ -209,6 +212,7 @@ public class DashboardView extends VerticalLayout {
         titleGroup.add(title, subtitle);
 
         HorizontalLayout actions = new HorizontalLayout();
+        actions.addClassName("st-header-actions");
         actions.setSpacing(true);
 
         RouterLink marketLink = new RouterLink();
@@ -384,7 +388,11 @@ public class DashboardView extends VerticalLayout {
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "8px");
+            tableContainer.getStyle()
+                    .set("margin-top", "8px")
+                    .set("overflow-x", "auto")
+                    .set("-webkit-overflow-scrolling", "touch")
+                    .set("max-width", "100%");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
@@ -394,6 +402,7 @@ public class DashboardView extends VerticalLayout {
                     .set("font-size", "10px")
                     .set("text-transform", "uppercase")
                     .set("letter-spacing", "0.06em")
+                    .set("min-width", "460px")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
@@ -411,6 +420,7 @@ public class DashboardView extends VerticalLayout {
                 row.setWidthFull();
                 row.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
+                        .set("min-width", "460px")
                         .set("font-size", "12px");
                 row.setAlignItems(FlexComponent.Alignment.CENTER);
 
@@ -484,7 +494,11 @@ public class DashboardView extends VerticalLayout {
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "8px");
+            tableContainer.getStyle()
+                    .set("margin-top", "8px")
+                    .set("overflow-x", "auto")
+                    .set("-webkit-overflow-scrolling", "touch")
+                    .set("max-width", "100%");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
@@ -494,6 +508,7 @@ public class DashboardView extends VerticalLayout {
                     .set("font-size", "10px")
                     .set("text-transform", "uppercase")
                     .set("letter-spacing", "0.06em")
+                    .set("min-width", "460px")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
@@ -511,6 +526,7 @@ public class DashboardView extends VerticalLayout {
                 posRow.setWidthFull();
                 posRow.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
+                        .set("min-width", "460px")
                         .set("font-size", "12px");
                 posRow.setAlignItems(FlexComponent.Alignment.CENTER);
 

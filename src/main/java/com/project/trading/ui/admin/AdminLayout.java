@@ -2,6 +2,7 @@ package com.project.trading.ui.admin;
 
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -39,9 +40,31 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
     private void createNavbar() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.setAriaLabel("Toggle navigation");
+        toggle.addClassName("st-drawer-toggle");
         toggle.getStyle().set("color", "var(--st-text-secondary)");
 
+        // Mobile brand badge
+        Div mobileBrand = new Div();
+        mobileBrand.addClassName("st-navbar-mobile-brand");
+        Component mobileBrandIcon = createSvgIcon(SVG_BRAND);
+        Span mobileBrandText = new Span("SimTrade");
+        mobileBrandText.addClassName("st-brand-text");
+        Span mobileTag = new Span("ADMIN");
+        mobileTag.getStyle()
+                .set("font-size", "9px")
+                .set("font-weight", "700")
+                .set("letter-spacing", "0.08em")
+                .set("text-transform", "uppercase")
+                .set("color", "var(--st-amber)")
+                .set("background", "var(--st-amber-bg)")
+                .set("border", "1px solid rgba(217, 119, 6, 0.3)")
+                .set("padding", "1px 5px")
+                .set("border-radius", "2px");
+        mobileBrandText.add(mobileTag);
+        mobileBrand.add(mobileBrandIcon, mobileBrandText);
+
         Span titleBadge = new Span("ADMIN CONSOLE");
+        titleBadge.addClassName("st-navbar-status");
         titleBadge.getStyle()
                 .set("font-size", "11px")
                 .set("font-weight", "700")
@@ -52,8 +75,8 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
                 .set("padding", "3px 8px")
                 .set("border-radius", "3px");
 
-        Div navbarLeft = new Div(toggle, titleBadge);
-        navbarLeft.getStyle().set("display", "flex").set("align-items", "center").set("gap", "12px");
+        Div navbarLeft = new Div(toggle, mobileBrand, titleBadge);
+        navbarLeft.addClassName("st-navbar-left");
 
         Div navbarContent = new Div(navbarLeft);
         navbarContent.addClassName("st-navbar");
@@ -134,6 +157,10 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
 
         link.add(svgIcon, label);
         navLinks.add(link);
+
+        // Close overlay drawer immediately upon click
+        link.getElement().executeJs("this.addEventListener('click', () => window.dispatchEvent(new CustomEvent('close-overlay-drawer')));");
+
         return link;
     }
 
@@ -146,6 +173,11 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
 
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
+        if (isOverlay()) {
+            setDrawerOpened(false);
+        }
+        UI.getCurrent().getPage().executeJs("window.dispatchEvent(new CustomEvent('close-overlay-drawer'));");
+
         String currentPath = event.getLocation().getPath();
         for (RouterLink link : navLinks) {
             String href = link.getHref();

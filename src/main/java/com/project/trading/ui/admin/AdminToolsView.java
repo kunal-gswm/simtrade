@@ -210,10 +210,10 @@ public class AdminToolsView extends VerticalLayout {
         ComboBox<Stock> stockSelect = new ComboBox<>("Select Stock Instrument");
         stockSelect.setItems(stockService.listAll());
         stockSelect.setItemLabelGenerator(s -> s.getSymbol() + " · " + s.getCompanyName());
-        stockSelect.setWidth("320px");
+        stockSelect.setWidth("min(320px, 100%)");
 
         BigDecimalField priceField = new BigDecimalField("Override Price (₹)");
-        priceField.setWidth("200px");
+        priceField.setWidth("min(200px, 100%)");
 
         stockSelect.addValueChangeListener(e -> {
             if (e.getValue() != null) {

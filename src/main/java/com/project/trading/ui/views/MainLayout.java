@@ -3,6 +3,7 @@ package com.project.trading.ui.views;
 import com.project.trading.model.AuthUser;
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -38,7 +39,19 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private void createNavbar() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.setAriaLabel("Toggle navigation");
+        toggle.addClassName("st-drawer-toggle");
         toggle.getStyle().set("color", "var(--st-text-secondary)");
+
+        // Mobile brand badge (visible on tablet / mobile)
+        Div mobileBrand = new Div();
+        mobileBrand.addClassName("st-navbar-mobile-brand");
+        Component mobileBrandIcon = createSvgIcon(SVG_BRAND);
+        Span mobileBrandText = new Span("SimTrade");
+        mobileBrandText.addClassName("st-brand-text");
+        Span mobileTag = new Span("PAPER");
+        mobileTag.addClassName("st-brand-tag");
+        mobileBrandText.add(mobileTag);
+        mobileBrand.add(mobileBrandIcon, mobileBrandText);
 
         Div statusBadge = new Div();
         statusBadge.addClassName("st-navbar-status");
@@ -48,8 +61,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         statusText.getStyle().set("font-size", "11px").set("font-weight", "600").set("letter-spacing", "0.06em");
         statusBadge.add(pulse, statusText);
 
-        Div navbarLeft = new Div(toggle, statusBadge);
-        navbarLeft.getStyle().set("display", "flex").set("align-items", "center").set("gap", "12px");
+        Div navbarLeft = new Div(toggle, mobileBrand, statusBadge);
+        navbarLeft.addClassName("st-navbar-left");
 
         Div navbarContent = new Div(navbarLeft);
         navbarContent.addClassName("st-navbar");
@@ -73,7 +86,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             usernameSpan.addClassName("st-navbar-username");
 
             Div userProfile = new Div(avatar, usernameSpan);
-            userProfile.getStyle().set("display", "flex").set("align-items", "center").set("gap", "8px");
+            userProfile.addClassName("st-user-profile");
 
             Button logout = new Button("Exit", e -> securityService.logout());
             logout.setIcon(createSvgIcon(SVG_LOGOUT));
@@ -139,6 +152,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         link.add(svgIcon, label);
         navLinks.add(link);
+
+        // Immediately close overlay drawer on client-side click
+        link.getElement().executeJs("this.addEventListener('click', () => window.dispatchEvent(new CustomEvent('close-overlay-drawer')));");
+
         return link;
     }
 
@@ -151,6 +168,11 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
+        if (isOverlay()) {
+            setDrawerOpened(false);
+        }
+        UI.getCurrent().getPage().executeJs("window.dispatchEvent(new CustomEvent('close-overlay-drawer'));");
+
         String currentPath = event.getLocation().getPath();
         for (RouterLink link : navLinks) {
             String href = link.getHref();

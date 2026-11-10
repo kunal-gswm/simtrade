@@ -64,7 +64,7 @@ public class AdminUsersView extends VerticalLayout {
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(e -> updateList());
         filterText.addClassName("st-search-field");
-        filterText.setWidth("320px");
+        filterText.setWidth("min(320px, 100%)");
 
         HorizontalLayout toolbar = new HorizontalLayout(filterText);
         toolbar.getStyle().set("margin-bottom", "16px");

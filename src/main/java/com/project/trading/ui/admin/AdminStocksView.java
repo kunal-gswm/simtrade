@@ -63,14 +63,14 @@ public class AdminStocksView extends VerticalLayout {
         searchField.setValueChangeMode(ValueChangeMode.LAZY);
         searchField.addValueChangeListener(e -> refreshData());
         searchField.addClassName("st-search-field");
-        searchField.setWidth("300px");
+        searchField.setWidth("min(300px, 100%)");
 
         Button addBtn = new Button("Register New Stock", e -> openStockForm(null));
         addBtn.addClassNames("st-btn", "st-btn-primary");
         addBtn.getElement().removeAttribute("theme");
 
         HorizontalLayout toolbar = new HorizontalLayout(searchField, addBtn);
-        toolbar.getStyle().set("margin-bottom", "16px").set("align-items", "center");
+        toolbar.getStyle().set("margin-bottom", "16px").set("align-items", "center").set("flex-wrap", "wrap");
 
         Div tableSurface = new Div(grid);
         tableSurface.addClassName("st-table-surface");
