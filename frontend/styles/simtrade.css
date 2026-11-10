@@ -181,9 +181,21 @@ vaadin-app-layout::part(navbar) {
 
 vaadin-app-layout [slot="drawer"] {
   padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.st-drawer-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--st-bg-surface);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Desktop > 1024px: Permanent stable sidebar, hide hamburger */
@@ -217,6 +229,9 @@ vaadin-app-layout [slot="drawer"] {
     display: none !important;
   }
   .st-navbar-mobile-brand {
+    display: none !important;
+  }
+  .st-drawer-close-btn {
     display: none !important;
   }
 }
@@ -253,6 +268,10 @@ vaadin-app-layout [slot="drawer"] {
     align-items: center;
     gap: 6px;
     margin-right: 8px;
+  }
+
+  .st-drawer-close-btn {
+    display: inline-flex !important;
   }
 
   /* Closed state on mobile/tablet: occupies 0px horizontal space, hidden */
@@ -305,11 +324,21 @@ vaadin-app-layout [slot="drawer"] {
 .st-drawer-brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--st-border);
+  padding: 0 16px;
+  height: 52px;
   min-height: 52px;
+  max-height: 52px;
+  border-bottom: 1px solid var(--st-border);
   box-sizing: border-box;
+  flex-shrink: 0;
+}
+.st-drawer-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 .st-drawer-brand svg {
   color: var(--st-copper);
@@ -325,6 +354,44 @@ vaadin-app-layout [slot="drawer"] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.st-drawer-close-btn {
+  display: none;
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--st-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--st-text-secondary);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.st-drawer-close-btn:hover {
+  background: var(--st-bg-surface-elevated);
+  color: var(--st-text-primary);
+  border-color: var(--st-copper);
+}
+.st-drawer-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.st-drawer-nav-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  padding: 8px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.st-nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .st-brand-tag {
   font-size: 9px;
