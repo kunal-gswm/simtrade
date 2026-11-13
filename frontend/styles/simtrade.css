@@ -1381,3 +1381,143 @@ vaadin-dialog-overlay::part(content) {
   overflow-x: hidden;
   padding: 16px !important;
 }
+
+/* ==========================================================================
+   INTERACTIVE CANDLESTICK CHART (Lightweight Charts + SimTrade Theme)
+   ========================================================================== */
+trading-chart {
+  display: block;
+  width: 100%;
+}
+
+.st-chart-card {
+  background: var(--st-bg-surface);
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  margin-bottom: 16px;
+}
+
+.st-chart-compact {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.st-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.st-chart-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.st-chart-symbol {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--st-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.st-chart-company {
+  font-size: 12px;
+  color: var(--st-text-secondary);
+}
+
+.st-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.st-chart-legend-muted {
+  color: var(--st-text-muted);
+  font-style: italic;
+}
+
+.st-ohlc-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--st-text-primary);
+}
+
+.st-ohlc-label {
+  color: var(--st-text-secondary);
+  font-weight: 600;
+}
+
+.st-chart-timeframes {
+  display: inline-flex;
+  align-items: center;
+  background: var(--st-bg-surface-secondary);
+  border: 1px solid var(--st-border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.st-tf-btn {
+  background: transparent;
+  border: none;
+  color: var(--st-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.st-tf-btn:hover {
+  color: var(--st-text-primary);
+  background: var(--st-bg-hover);
+}
+
+.st-tf-btn.active {
+  color: #FFFFFF;
+  background: var(--st-copper);
+}
+
+.st-chart-canvas-container {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .st-chart-card {
+    padding: 10px;
+  }
+  .st-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .st-chart-legend {
+    gap: 6px;
+    font-size: 10px;
+  }
+  .st-tf-btn {
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+}
+

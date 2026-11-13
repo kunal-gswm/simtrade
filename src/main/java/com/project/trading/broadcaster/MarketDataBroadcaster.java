@@ -1,5 +1,6 @@
 package com.project.trading.broadcaster;
 
+import com.project.trading.model.Candle;
 import com.project.trading.model.Trade;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.shared.Registration;
@@ -24,6 +25,8 @@ public class MarketDataBroadcaster {
 
     public record TradeUpdate(Trade trade, long timestamp) {}
 
+    public record CandleUpdate(Candle candle, long timestamp) {}
+
     @FunctionalInterface
     public interface Registration extends com.vaadin.flow.shared.Registration {
         @Override
@@ -33,6 +36,7 @@ public class MarketDataBroadcaster {
     public interface BroadcastListener {
         default void onPriceUpdate(PriceUpdate event) {}
         default void onTradeUpdate(TradeUpdate event) {}
+        default void onCandleUpdate(CandleUpdate event) {}
     }
 
     @FunctionalInterface
@@ -43,6 +47,11 @@ public class MarketDataBroadcaster {
     @FunctionalInterface
     public interface TradeListener {
         void onTradeUpdate(Trade trade);
+    }
+
+    @FunctionalInterface
+    public interface CandleListener {
+        void onCandleUpdate(Candle candle);
     }
 
     private static final CopyOnWriteArrayList<BroadcastListener> listeners = new CopyOnWriteArrayList<>();
@@ -89,6 +98,25 @@ public class MarketDataBroadcaster {
                     ui.access(() -> {
                         if (ui.isAttached() && !ui.isClosing()) {
                             listener.onTradeUpdate(event);
+                        } else {
+                            listeners.remove(this);
+                        }
+                    });
+                } catch (Throwable t) {
+                    listeners.remove(this);
+                }
+            }
+
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                if (!ui.isAttached() || ui.isClosing()) {
+                    listeners.remove(this);
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (ui.isAttached() && !ui.isClosing()) {
+                            listener.onCandleUpdate(event);
                         } else {
                             listeners.remove(this);
                         }
@@ -147,6 +175,27 @@ public class MarketDataBroadcaster {
         });
     }
 
+    public static Registration registerCandleListener(CandleListener listener) {
+        if (listener == null) return () -> {};
+        BroadcastListener bl = new BroadcastListener() {
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                listener.onCandleUpdate(event.candle());
+            }
+        };
+        return register(bl);
+    }
+
+    public static Registration registerCandleListener(UI ui, CandleListener listener) {
+        if (listener == null) return () -> {};
+        return register(ui, new BroadcastListener() {
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                listener.onCandleUpdate(event.candle());
+            }
+        });
+    }
+
     public static void broadcastPrices(Map<Long, BigDecimal> newPrices) {
         if (newPrices == null || newPrices.isEmpty()) return;
         PriceUpdate event = new PriceUpdate(newPrices, System.currentTimeMillis());
@@ -169,6 +218,19 @@ public class MarketDataBroadcaster {
             } catch (Throwable t) {
                 listeners.remove(listener);
                 System.err.println("[MarketDataBroadcaster] Removed failing trade listener: " + t.getMessage());
+            }
+        }
+    }
+
+    public static void broadcastCandle(Candle candle) {
+        if (candle == null) return;
+        CandleUpdate event = new CandleUpdate(candle, System.currentTimeMillis());
+        for (BroadcastListener listener : listeners) {
+            try {
+                listener.onCandleUpdate(event);
+            } catch (Throwable t) {
+                listeners.remove(listener);
+                System.err.println("[MarketDataBroadcaster] Removed failing candle listener: " + t.getMessage());
             }
         }
     }

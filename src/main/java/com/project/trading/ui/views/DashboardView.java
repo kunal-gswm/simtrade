@@ -2,9 +2,12 @@ package com.project.trading.ui.views;
 
 import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.model.AuthUser;
+import com.project.trading.model.Stock;
 import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
+import com.project.trading.service.StockService;
 import com.project.trading.service.TradingService;
+import com.project.trading.ui.components.TradingChartView;
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
@@ -39,6 +42,8 @@ public class DashboardView extends VerticalLayout {
     private final SecurityService securityService = new SecurityService();
     private final PortfolioService portfolioService = new PortfolioService();
     private final TradingService tradingService = new TradingService();
+    private final StockService stockService = new StockService();
+    private final TradingChartView marketPulseChart = new TradingChartView();
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
     private final NumberFormat percentFormat = NumberFormat.getPercentInstance(new Locale("en", "IN"));
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm");
@@ -75,8 +80,12 @@ public class DashboardView extends VerticalLayout {
             return;
         }
 
+        marketPulseChart.setCompact(true);
+        marketPulseChart.setHeight(250);
+
         add(createHeader(currentUser));
         add(createMetricsGrid());
+        add(marketPulseChart);
         add(createAllocationSection());
 
         HorizontalLayout splitSection = new HorizontalLayout();
@@ -116,6 +125,13 @@ public class DashboardView extends VerticalLayout {
             public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
                 if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
                     refreshDashboardData();
+                }
+            }
+
+            @Override
+            public void onCandleUpdate(MarketDataBroadcaster.CandleUpdate event) {
+                if (event.candle() != null) {
+                    marketPulseChart.onCandleUpdate(event.candle());
                 }
             }
         });
@@ -171,6 +187,16 @@ public class DashboardView extends VerticalLayout {
 
             // Update Active Positions
             updateActivePositions(summary);
+
+            // Ensure compact market pulse chart has stock assigned
+            if (marketPulseChart.getStock() == null) {
+                try {
+                    List<Stock> active = stockService.listActive();
+                    if (!active.isEmpty()) {
+                        marketPulseChart.setStock(active.get(0));
+                    }
+                } catch (Exception ignored) {}
+            }
 
         } catch (Exception e) {
             // Keep existing displayed state if a transient query error occurs

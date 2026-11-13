@@ -65,3 +65,26 @@ CREATE TABLE trades (
     CONSTRAINT chk_trades_qty CHECK (quantity > 0),
     CONSTRAINT chk_trades_price CHECK (price > 0)
 ) ENGINE=InnoDB;
+
+CREATE TABLE candles (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    stock_id BIGINT NOT NULL,
+    timeframe VARCHAR(10) NOT NULL,
+    open_price DECIMAL(12,2) NOT NULL,
+    high_price DECIMAL(12,2) NOT NULL,
+    low_price DECIMAL(12,2) NOT NULL,
+    close_price DECIMAL(12,2) NOT NULL,
+    volume BIGINT NOT NULL DEFAULT 0,
+    open_time TIMESTAMP NOT NULL,
+    is_closed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_candles_stock_tf_time (stock_id, timeframe, open_time),
+    KEY idx_candles_lookup (stock_id, timeframe, open_time ASC),
+    KEY idx_candles_stock_tf_closed (stock_id, timeframe, is_closed),
+    CONSTRAINT fk_candles_stock FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE,
+    CONSTRAINT chk_candles_prices CHECK (open_price > 0 AND high_price >= low_price AND high_price >= open_price AND high_price >= close_price AND low_price <= open_price AND low_price <= close_price),
+    CONSTRAINT chk_candles_volume CHECK (volume >= 0)
+) ENGINE=InnoDB;
+

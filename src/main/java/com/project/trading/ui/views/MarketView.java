@@ -10,6 +10,7 @@ import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
 import com.project.trading.service.StockService;
 import com.project.trading.service.TradingService;
+import com.project.trading.ui.components.TradingChartView;
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
@@ -60,9 +61,11 @@ public class MarketView extends Div {
     private final Span stockCountValue;
     private final Div emptyState;
     private final Div tableContainer;
+    private final TradingChartView chartView;
 
     private Registration priceListenerRegistration;
     private Registration tradeListenerRegistration;
+    private Registration candleListenerRegistration;
 
     private static final String SVG_SEARCH = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z\" /></svg>";
 
@@ -202,7 +205,17 @@ public class MarketView extends Div {
         tableContainer = new Div(grid);
         tableContainer.addClassName("st-table-surface");
 
-        add(headerContainer, toolbar, emptyState, tableContainer);
+        chartView = new TradingChartView();
+        chartView.setHeight(360);
+
+        grid.asSingleSelect().addValueChangeListener(e -> {
+            Stock selected = e.getValue();
+            if (selected != null) {
+                chartView.setStock(selected);
+            }
+        });
+
+        add(headerContainer, toolbar, chartView, emptyState, tableContainer);
 
         updateList();
         updateSummary();
@@ -226,6 +239,11 @@ public class MarketView extends Div {
         tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(ui, trade -> {
             updateSummary();
         });
+
+        // Subscribe to live streaming candles for the interactive chart
+        candleListenerRegistration = MarketDataBroadcaster.registerCandleListener(ui, candle -> {
+            chartView.onCandleUpdate(candle);
+        });
     }
 
     @Override
@@ -237,6 +255,10 @@ public class MarketView extends Div {
         if (tradeListenerRegistration != null) {
             tradeListenerRegistration.remove();
             tradeListenerRegistration = null;
+        }
+        if (candleListenerRegistration != null) {
+            candleListenerRegistration.remove();
+            candleListenerRegistration = null;
         }
         super.onDetach(detachEvent);
     }
@@ -289,12 +311,19 @@ public class MarketView extends Div {
             if (stocks.isEmpty()) {
                 emptyState.setVisible(true);
                 tableContainer.setVisible(false);
+                chartView.setVisible(false);
                 grid.setItems();
             } else {
                 emptyState.setVisible(false);
                 tableContainer.setVisible(true);
+                chartView.setVisible(true);
                 grid.setItems(stocks);
                 stockCountValue.setText(String.valueOf(stocks.size()));
+                if (chartView.getStock() == null) {
+                    Stock first = stocks.get(0);
+                    grid.select(first);
+                    chartView.setStock(first);
+                }
             }
         } catch (DataAccessException e) {
             emptyState.setVisible(true);
