@@ -20,7 +20,7 @@ import java.util.Set;
  * CSRF protection filter for standard Servlet POST endpoints.
  * Validates CSRF synchronizer tokens against the user session.
  */
-@WebFilter(filterName = "CsrfFilter", urlPatterns = {"/app/*", "/admin/*", "/trade", "/logout"})
+@WebFilter(filterName = "CsrfFilter", urlPatterns = {"/app/*", "/admin/*", "/legacy/admin/*", "/trade", "/logout"})
 public class CsrfFilter implements Filter {
 
     public static final String CSRF_TOKEN_ATTR = "csrfToken";
@@ -39,6 +39,12 @@ public class CsrfFilter implements Filter {
             throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
+
+        // Vaadin Flow handles its own native UIDL and push CSRF token protection
+        if (req.getParameter("v-r") != null) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         HttpSession session = req.getSession(true);
         String sessionToken = (String) session.getAttribute(CSRF_TOKEN_ATTR);

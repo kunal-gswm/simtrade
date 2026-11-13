@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
-@WebServlet("/admin/dashboard")
+@WebServlet("/legacy/admin/dashboard")
 public class AdminDashboardServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 

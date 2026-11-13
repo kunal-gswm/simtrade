@@ -217,24 +217,20 @@ public class PortfolioView extends Div {
         // Immediate load
         updateData();
 
-        // Broadcast subscription for live real-time price changes & trades
-        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+        // Broadcast subscription for live real-time push price changes & trades with UI lifecycle binding
+        broadcastRegistration = MarketDataBroadcaster.register(ui, new MarketDataBroadcaster.BroadcastListener() {
             @Override
             public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
-                ui.access(() -> updateData());
+                updateData();
             }
 
             @Override
             public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
                 if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
-                    ui.access(() -> updateData());
+                    updateData();
                 }
             }
         });
-
-        // Fallback polling
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> updateData());
     }
 
     @Override
@@ -243,7 +239,6 @@ public class PortfolioView extends Div {
             broadcastRegistration.remove();
             broadcastRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1);
         super.onDetach(detachEvent);
     }
 

@@ -1,3 +1,11 @@
+# SimTrade Database Configuration Example
+# Copy this file to db.properties or provide environment variables DB_URL, DB_USER, DB_PASSWORD
 db.url=jdbc:mysql://localhost:3306/papertrade?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata
-db.user=root
-db.password=password
+db.user=your_database_username
+db.password=your_database_password
+
+# Connection Pool Tuning (Optional)
+db.pool.maxSize=15
+db.pool.minIdle=2
+db.pool.connectionTimeoutMs=10000
+db.pool.idleTimeoutMs=30000

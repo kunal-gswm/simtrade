@@ -105,24 +105,20 @@ public class DashboardView extends VerticalLayout {
         // Refresh immediately on attach
         refreshDashboardData();
 
-        // Register to centralized market broadcaster for real-time price & trade events
-        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+        // Register to centralized market broadcaster for real-time push events
+        broadcastRegistration = MarketDataBroadcaster.register(ui, new MarketDataBroadcaster.BroadcastListener() {
             @Override
             public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
-                ui.access(() -> refreshDashboardData());
+                refreshDashboardData();
             }
 
             @Override
             public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
                 if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
-                    ui.access(() -> refreshDashboardData());
+                    refreshDashboardData();
                 }
             }
         });
-
-        // Set controlled 3-second fallback polling interval
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> refreshDashboardData());
     }
 
     @Override
@@ -131,7 +127,6 @@ public class DashboardView extends VerticalLayout {
             broadcastRegistration.remove();
             broadcastRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1); // Disable polling on leave
         super.onDetach(detachEvent);
     }
 

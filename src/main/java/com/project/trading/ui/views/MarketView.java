@@ -217,20 +217,13 @@ public class MarketView extends Div {
         updateList();
         updateSummary();
 
-        // Subscribe to live multi-symbol price broadcasts
-        priceListenerRegistration = MarketDataBroadcaster.registerPriceListener(event -> {
-            ui.access(this::updateList);
-        });
-
-        // Subscribe to live order executions to update available liquidity
-        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(trade -> {
-            ui.access(this::updateSummary);
-        });
-
-        // Controlled 3-second fallback polling
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> {
+        // Subscribe to live multi-symbol price broadcasts with UI lifecycle binding
+        priceListenerRegistration = MarketDataBroadcaster.registerPriceListener(ui, event -> {
             updateList();
+        });
+
+        // Subscribe to live order executions to update available liquidity with UI lifecycle binding
+        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(ui, trade -> {
             updateSummary();
         });
     }
@@ -245,7 +238,6 @@ public class MarketView extends Div {
             tradeListenerRegistration.remove();
             tradeListenerRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1);
         super.onDetach(detachEvent);
     }
 

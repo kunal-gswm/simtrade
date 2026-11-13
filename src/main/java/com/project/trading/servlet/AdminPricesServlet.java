@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
-@WebServlet("/admin/prices")
+@WebServlet("/legacy/admin/prices")
 public class AdminPricesServlet extends BaseServlet {
 
     private final StockService stockService = new StockService();
@@ -39,7 +39,7 @@ public class AdminPricesServlet extends BaseServlet {
         String action = req.getParameter("action");
         if (action == null) {
             flashError(req, "Action parameter is required.");
-            redirect(req, resp, "/admin/prices");
+            redirect(req, resp, "/legacy/admin/prices");
             return;
         }
 
@@ -99,6 +99,6 @@ public class AdminPricesServlet extends BaseServlet {
             flashError(req, "Failed to perform operation: " + e.getMessage());
         }
 
-        redirect(req, resp, "/admin/prices");
+        redirect(req, resp, "/legacy/admin/prices");
     }
 }

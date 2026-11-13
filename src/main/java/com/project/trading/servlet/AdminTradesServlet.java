@@ -14,7 +14,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
-@WebServlet("/admin/trades")
+@WebServlet("/legacy/admin/trades")
 public class AdminTradesServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 

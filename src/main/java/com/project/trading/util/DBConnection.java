@@ -30,9 +30,20 @@ public class DBConnection {
         String envUser = System.getenv("DB_USER");
         String envPass = System.getenv("DB_PASSWORD");
 
-        String url = envUrl != null ? envUrl : props.getProperty("db.url", "jdbc:mysql://localhost:3306/papertrade?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Kolkata");
-        String user = envUser != null ? envUser : props.getProperty("db.user", "root");
-        String pass = envPass != null ? envPass : props.getProperty("db.password", "root");
+        String url = (envUrl != null && !envUrl.isBlank()) ? envUrl : props.getProperty("db.url");
+        String user = (envUser != null && !envUser.isBlank()) ? envUser : props.getProperty("db.user");
+        String pass = (envPass != null && !envPass.isBlank()) ? envPass : props.getProperty("db.password");
+
+        if (url == null || url.isBlank() || user == null || user.isBlank()) {
+            throw new IllegalStateException(
+                "Database configuration is incomplete. " +
+                "Explicit credentials are required: configure db.url, db.user, and db.password in db.properties, " +
+                "or set DB_URL, DB_USER, and DB_PASSWORD environment variables."
+            );
+        }
+        if (pass == null) {
+            pass = "";
+        }
 
         int maxPoolSize = Integer.parseInt(props.getProperty("db.pool.maxSize", "15"));
         int minIdle = Integer.parseInt(props.getProperty("db.pool.minIdle", "2"));
@@ -49,6 +60,7 @@ public class DBConnection {
         config.setConnectionTimeout(connTimeout);
         config.setIdleTimeout(idleTimeout);
         config.setMaxLifetime(1800000); // 30 minutes
+        config.setLeakDetectionThreshold(5000); // 5 seconds leak detection threshold
         config.setPoolName("SimTrade-HikariPool");
 
         // Performance optimizations for MySQL Connector/J

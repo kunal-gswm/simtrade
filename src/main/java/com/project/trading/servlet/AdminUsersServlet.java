@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/admin/users")
+@WebServlet("/legacy/admin/users")
 public class AdminUsersServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
 
@@ -52,6 +52,6 @@ public class AdminUsersServlet extends BaseServlet {
             flashError(req, e.getMessage());
         }
 
-        redirect(req, resp, "/admin/users");
+        redirect(req, resp, "/legacy/admin/users");
     }
 }
