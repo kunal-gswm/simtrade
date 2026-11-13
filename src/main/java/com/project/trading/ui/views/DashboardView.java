@@ -227,7 +227,7 @@ public class DashboardView extends VerticalLayout {
         H1 title = new H1("Overview · " + formattedUsername);
         title.addClassName("st-page-title");
 
-        Paragraph subtitle = new Paragraph("Live paper trading capital, position valuations and order telemetry.");
+        Paragraph subtitle = new Paragraph("Institutional Paper Engine · Real-time portfolio valuation, simulated Indian equities, and execution telemetry.");
         subtitle.addClassName("st-page-subtitle");
 
         titleGroup.add(title, subtitle);

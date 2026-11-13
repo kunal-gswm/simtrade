@@ -87,7 +87,7 @@ public class MarketView extends Div {
 
         H2 title = new H2("Market Quotes");
         title.addClassName("st-page-title");
-        Paragraph subtitle = new Paragraph("Live simulated equity instruments, real-time spread data and order placement.");
+        Paragraph subtitle = new Paragraph("Institutional Paper Engine — Simulated Indian equity instruments, real-time spread data, session-aligned OHLCV and order execution.");
         subtitle.addClassName("st-page-subtitle");
         titleGroup.add(title, subtitle);
 

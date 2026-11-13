@@ -121,7 +121,8 @@ public class TradingChartView extends Component {
                 "\"high\":" + (c.getHighPrice() != null ? c.getHighPrice().toPlainString() : "0") + "," +
                 "\"low\":" + (c.getLowPrice() != null ? c.getLowPrice().toPlainString() : "0") + "," +
                 "\"close\":" + (c.getClosePrice() != null ? c.getClosePrice().toPlainString() : "0") + "," +
-                "\"volume\":" + c.getVolume() +
+                "\"volume\":" + c.getVolume() + "," +
+                "\"source\":\"" + (c.getSource() != null ? c.getSource().name() : "SIMULATED_STREAM") + "\"" +
                 "}";
     }
 }

@@ -3,6 +3,7 @@ package com.project.trading.service;
 import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.dao.CandleDAO;
 import com.project.trading.model.Candle;
+import com.project.trading.model.MarketSessionCalendar;
 import com.project.trading.model.Timeframe;
 import com.project.trading.util.DBConnection;
 
@@ -66,6 +67,7 @@ public class CandleEngine {
 
     public synchronized void start(int flushIntervalSeconds) {
         if (running.compareAndSet(false, true)) {
+            recoverActiveCandles();
             flushScheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
@@ -76,6 +78,39 @@ public class CandleEngine {
             });
             int interval = flushIntervalSeconds <= 0 ? 10 : flushIntervalSeconds;
             flushScheduler.scheduleWithFixedDelay(this::flushPending, interval, interval, TimeUnit.SECONDS);
+        }
+    }
+
+    /**
+     * Recovers unclosed active candles from the database to maintain continuity across restarts.
+     */
+    public synchronized void recoverActiveCandles() {
+        try (Connection c = DBConnection.getConnection()) {
+            List<Candle> unclosed = candleDAO.findUnclosed(c);
+            Instant now = Instant.now();
+            List<Candle> expiredToClose = new ArrayList<>();
+
+            for (Candle candle : unclosed) {
+                if (candle == null || candle.getStockId() == null || candle.getTimeframe() == null) continue;
+                Timeframe tf = candle.getTimeframe();
+                Instant currentBoundary = tf.getCandleStart(now);
+                CandleKey key = new CandleKey(candle.getStockId(), tf);
+
+                if (candle.getOpenTime().equals(currentBoundary)) {
+                    // Candle is still in its active interval; recover in-memory
+                    activeCandles.put(key, candle);
+                } else if (candle.getOpenTime().isBefore(currentBoundary)) {
+                    // Interval elapsed while server was offline; close and finalize
+                    candle.setClosed(true);
+                    expiredToClose.add(candle);
+                }
+            }
+
+            if (!expiredToClose.isEmpty()) {
+                candleDAO.upsertBatch(c, expiredToClose);
+            }
+        } catch (Throwable t) {
+            System.err.println("[CandleEngine] Active candle recovery warning: " + t.getMessage());
         }
     }
 
@@ -109,6 +144,11 @@ public class CandleEngine {
             return;
         }
 
+        // If market session enforcement is enabled, reject ticks outside active trading hours
+        if (MarketSessionCalendar.isSessionEnforced() && !MarketSessionCalendar.isSessionOpen(tickTime)) {
+            return;
+        }
+
         long volume = calculateTickVolume(stockId, newPrice, prevPrice);
 
         for (Timeframe tf : Timeframe.values()) {
@@ -119,7 +159,7 @@ public class CandleEngine {
             synchronized (this) {
                 Candle current = activeCandles.get(key);
                 if (current == null) {
-                    Candle newCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart);
+                    Candle newCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, Candle.CandleSource.SIMULATED_STREAM);
                     activeCandles.put(key, newCandle);
                     candleToBroadcast = newCandle.copy();
                 } else if (current.getOpenTime().equals(candleStart)) {
@@ -131,7 +171,7 @@ public class CandleEngine {
                     persistenceQueue.add(current.copy());
 
                     // Start new candle for new boundary
-                    Candle nextCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart);
+                    Candle nextCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, Candle.CandleSource.SIMULATED_STREAM);
                     activeCandles.put(key, nextCandle);
                     candleToBroadcast = nextCandle.copy();
                 }

@@ -89,6 +89,8 @@ export class TradingChart extends HTMLElement {
                     <div class="st-chart-title-area">
                         <span class="st-chart-symbol">${this._symbol}</span>
                         <span class="st-chart-company">${this._companyName}</span>
+                        <span class="st-chart-badge-paper">PAPER SIMULATION</span>
+                        <span class="st-chart-tz-badge">Asia/Kolkata (IST)</span>
                         <div class="st-chart-legend"></div>
                     </div>
                     <div class="st-chart-timeframes">
@@ -350,6 +352,22 @@ export class TradingChart extends HTMLElement {
             return;
         }
 
+        let timeLabel = '';
+        if (c.time) {
+            const rawSec = typeof c.time === 'number' ? c.time : (c.time.timestamp || 0);
+            if (rawSec > 0) {
+                const d = new Date(rawSec * 1000);
+                timeLabel = d.toLocaleString('en-IN', {
+                    timeZone: 'Asia/Kolkata',
+                    month: 'short',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }) + ' IST';
+            }
+        }
+
         const open = Number(c.open).toFixed(2);
         const high = Number(c.high).toFixed(2);
         const low = Number(c.low).toFixed(2);
@@ -365,6 +383,7 @@ export class TradingChart extends HTMLElement {
             : (c.volume >= 1000 ? (c.volume / 1000).toFixed(1) + 'K' : String(c.volume));
 
         this.legendEl.innerHTML = `
+            ${timeLabel ? `<span class="st-ohlc-item st-ohlc-time"><span class="tabular-num">${timeLabel}</span></span>` : ''}
             <span class="st-ohlc-item"><span class="st-ohlc-label">O</span> <span class="tabular-num">${open}</span></span>
             <span class="st-ohlc-item"><span class="st-ohlc-label">H</span> <span class="tabular-num">${high}</span></span>
             <span class="st-ohlc-item"><span class="st-ohlc-label">L</span> <span class="tabular-num">${low}</span></span>

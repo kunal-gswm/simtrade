@@ -21,15 +21,16 @@ import java.util.List;
 public class CandleDAO {
 
     private static final String UPSERT_SQL =
-            "INSERT INTO candles (stock_id, timeframe, open_price, high_price, low_price, close_price, volume, open_time, is_closed) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+            "INSERT INTO candles (stock_id, timeframe, open_price, high_price, low_price, close_price, volume, open_time, is_closed, source) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
             "ON DUPLICATE KEY UPDATE " +
-            "open_price = VALUES(open_price), " +
-            "high_price = VALUES(high_price), " +
-            "low_price = VALUES(low_price), " +
+            "open_price = candles.open_price, " +
+            "high_price = GREATEST(candles.high_price, VALUES(high_price)), " +
+            "low_price = LEAST(candles.low_price, VALUES(low_price)), " +
             "close_price = VALUES(close_price), " +
-            "volume = VALUES(volume), " +
-            "is_closed = VALUES(is_closed), " +
+            "volume = GREATEST(candles.volume, VALUES(volume)), " +
+            "is_closed = GREATEST(candles.is_closed, VALUES(is_closed)), " +
+            "source = VALUES(source), " +
             "updated_at = CURRENT_TIMESTAMP";
 
     public void upsertBatch(Connection c, Collection<Candle> candles) throws SQLException {
@@ -37,6 +38,10 @@ public class CandleDAO {
             return;
         }
 
+        boolean oldAutoCommit = c.getAutoCommit();
+        if (oldAutoCommit) {
+            c.setAutoCommit(false);
+        }
         try (PreparedStatement ps = c.prepareStatement(UPSERT_SQL)) {
             for (Candle candle : candles) {
                 if (candle == null || candle.getStockId() == null || candle.getTimeframe() == null || candle.getOpenTime() == null) {
@@ -51,9 +56,22 @@ public class CandleDAO {
                 ps.setLong(7, candle.getVolume());
                 ps.setTimestamp(8, Timestamp.from(candle.getOpenTime()));
                 ps.setBoolean(9, candle.isClosed());
+                ps.setString(10, candle.getSource() != null ? candle.getSource().name() : Candle.CandleSource.SIMULATED_STREAM.name());
                 ps.addBatch();
             }
             ps.executeBatch();
+            if (oldAutoCommit) {
+                c.commit();
+            }
+        } catch (SQLException e) {
+            if (oldAutoCommit) {
+                try { c.rollback(); } catch (SQLException ignored) {}
+            }
+            throw e;
+        } finally {
+            if (oldAutoCommit) {
+                try { c.setAutoCommit(true); } catch (SQLException ignored) {}
+            }
         }
     }
 
@@ -69,7 +87,7 @@ public class CandleDAO {
     public List<Candle> findByStockAndTimeframe(Connection c, long stockId, String timeframeCode, int limit) throws SQLException {
         int clampedLimit = Math.max(1, Math.min(limit, 2000));
         String sql = "SELECT id, stock_id, timeframe, open_price, high_price, low_price, close_price, " +
-                     "volume, open_time, is_closed, created_at, updated_at " +
+                     "volume, open_time, is_closed, source, created_at, updated_at " +
                      "FROM candles " +
                      "WHERE stock_id = ? AND timeframe = ? " +
                      "ORDER BY open_time DESC " +
@@ -99,7 +117,7 @@ public class CandleDAO {
     public List<Candle> findByRange(Connection c, long stockId, String timeframeCode, Instant start, Instant end, int limit) throws SQLException {
         int clampedLimit = Math.max(1, Math.min(limit, 2000));
         String sql = "SELECT id, stock_id, timeframe, open_price, high_price, low_price, close_price, " +
-                     "volume, open_time, is_closed, created_at, updated_at " +
+                     "volume, open_time, is_closed, source, created_at, updated_at " +
                      "FROM candles " +
                      "WHERE stock_id = ? AND timeframe = ? AND open_time >= ? AND open_time <= ? " +
                      "ORDER BY open_time ASC " +
@@ -124,7 +142,7 @@ public class CandleDAO {
 
     public Candle findLatest(Connection c, long stockId, String timeframeCode) throws SQLException {
         String sql = "SELECT id, stock_id, timeframe, open_price, high_price, low_price, close_price, " +
-                     "volume, open_time, is_closed, created_at, updated_at " +
+                     "volume, open_time, is_closed, source, created_at, updated_at " +
                      "FROM candles " +
                      "WHERE stock_id = ? AND timeframe = ? " +
                      "ORDER BY open_time DESC " +
@@ -140,6 +158,26 @@ public class CandleDAO {
             }
         }
         return null;
+    }
+
+    /**
+     * Finds all unclosed candles for restart recovery.
+     */
+    public List<Candle> findUnclosed(Connection c) throws SQLException {
+        String sql = "SELECT id, stock_id, timeframe, open_price, high_price, low_price, close_price, " +
+                     "volume, open_time, is_closed, source, created_at, updated_at " +
+                     "FROM candles " +
+                     "WHERE is_closed = 0 " +
+                     "ORDER BY open_time ASC";
+
+        List<Candle> result = new ArrayList<>();
+        try (PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                result.add(mapCandle(rs));
+            }
+        }
+        return result;
     }
 
     public long countByStockAndTimeframe(Connection c, long stockId, String timeframeCode) throws SQLException {
@@ -168,6 +206,11 @@ public class CandleDAO {
     }
 
     private Candle mapCandle(ResultSet rs) throws SQLException {
+        String sourceStr = null;
+        try {
+            sourceStr = rs.getString("source");
+        } catch (SQLException ignored) {
+        }
         Candle candle = new Candle(
                 rs.getLong("id"),
                 rs.getLong("stock_id"),
@@ -179,6 +222,7 @@ public class CandleDAO {
                 rs.getLong("volume"),
                 rs.getTimestamp("open_time").toInstant(),
                 rs.getBoolean("is_closed"),
+                Candle.CandleSource.fromStringSafe(sourceStr),
                 rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toInstant() : null,
                 rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toInstant() : null
         );

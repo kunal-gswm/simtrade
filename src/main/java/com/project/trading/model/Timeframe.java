@@ -39,24 +39,17 @@ public enum Timeframe {
     }
 
     /**
-     * Calculates the deterministic candle start timestamp (in UTC) for any given instant.
+     * Calculates the deterministic candle start timestamp in Asia/Kolkata session alignment.
      */
     public Instant getCandleStart(Instant time) {
-        Objects.requireNonNull(time, "Time cannot be null");
-        if (this == ONE_DAY) {
-            return time.atZone(ZoneOffset.UTC).truncatedTo(ChronoUnit.DAYS).toInstant();
-        }
-        long epochSec = time.getEpochSecond();
-        long startSec = epochSec - (epochSec % durationSeconds);
-        return Instant.ofEpochSecond(startSec);
+        return MarketSessionCalendar.getCandleStart(this, time);
     }
 
     /**
      * Calculates the subsequent candle boundary.
      */
     public Instant getNextCandleStart(Instant candleStart) {
-        Objects.requireNonNull(candleStart, "Candle start cannot be null");
-        return candleStart.plusSeconds(durationSeconds);
+        return MarketSessionCalendar.getNextCandleStart(this, candleStart);
     }
 
     /**

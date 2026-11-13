@@ -11,6 +11,21 @@ import java.util.Objects;
  */
 public class Candle {
 
+    public enum CandleSource {
+        SYNTHETIC_BACKFILL,
+        SIMULATED_STREAM,
+        EXCHANGE_IMPORT;
+
+        public static CandleSource fromStringSafe(String val) {
+            if (val == null || val.isBlank()) return SIMULATED_STREAM;
+            try {
+                return CandleSource.valueOf(val.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return SIMULATED_STREAM;
+            }
+        }
+    }
+
     private Long id;
     private Long stockId;
     private Timeframe timeframe;
@@ -21,6 +36,7 @@ public class Candle {
     private long volume;
     private Instant openTime;
     private boolean isClosed;
+    private CandleSource source = CandleSource.SIMULATED_STREAM;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -29,6 +45,12 @@ public class Candle {
 
     public Candle(Long stockId, Timeframe timeframe, BigDecimal openPrice, BigDecimal highPrice,
                   BigDecimal lowPrice, BigDecimal closePrice, long volume, Instant openTime, boolean isClosed) {
+        this(stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed, CandleSource.SIMULATED_STREAM);
+    }
+
+    public Candle(Long stockId, Timeframe timeframe, BigDecimal openPrice, BigDecimal highPrice,
+                  BigDecimal lowPrice, BigDecimal closePrice, long volume, Instant openTime, boolean isClosed,
+                  CandleSource source) {
         this.stockId = stockId;
         this.timeframe = timeframe;
         this.openPrice = sanitizePrice(openPrice);
@@ -38,12 +60,20 @@ public class Candle {
         this.volume = Math.max(0, volume);
         this.openTime = Objects.requireNonNull(openTime, "openTime must not be null");
         this.isClosed = isClosed;
+        this.source = source != null ? source : CandleSource.SIMULATED_STREAM;
     }
 
     public Candle(Long id, Long stockId, Timeframe timeframe, BigDecimal openPrice, BigDecimal highPrice,
                   BigDecimal lowPrice, BigDecimal closePrice, long volume, Instant openTime, boolean isClosed,
                   Instant createdAt, Instant updatedAt) {
-        this(stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed);
+        this(id, stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed,
+             CandleSource.SIMULATED_STREAM, createdAt, updatedAt);
+    }
+
+    public Candle(Long id, Long stockId, Timeframe timeframe, BigDecimal openPrice, BigDecimal highPrice,
+                  BigDecimal lowPrice, BigDecimal closePrice, long volume, Instant openTime, boolean isClosed,
+                  CandleSource source, Instant createdAt, Instant updatedAt) {
+        this(stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed, source);
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -54,8 +84,13 @@ public class Candle {
      */
     public static Candle createInitial(Long stockId, Timeframe timeframe, BigDecimal initialPrice,
                                        long initialVolume, Instant openTime) {
+        return createInitial(stockId, timeframe, initialPrice, initialVolume, openTime, CandleSource.SIMULATED_STREAM);
+    }
+
+    public static Candle createInitial(Long stockId, Timeframe timeframe, BigDecimal initialPrice,
+                                       long initialVolume, Instant openTime, CandleSource source) {
         BigDecimal p = sanitizePrice(initialPrice);
-        return new Candle(stockId, timeframe, p, p, p, p, initialVolume, openTime, false);
+        return new Candle(stockId, timeframe, p, p, p, p, initialVolume, openTime, false, source);
     }
 
     /**
@@ -187,12 +222,20 @@ public class Candle {
         return openTime != null ? openTime.getEpochSecond() : 0L;
     }
 
+    public CandleSource getSource() {
+        return source;
+    }
+
+    public void setSource(CandleSource source) {
+        this.source = source != null ? source : CandleSource.SIMULATED_STREAM;
+    }
+
     public boolean isBullish() {
         return closePrice != null && openPrice != null && closePrice.compareTo(openPrice) >= 0;
     }
 
     public Candle copy() {
-        Candle c = new Candle(stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed);
+        Candle c = new Candle(stockId, timeframe, openPrice, highPrice, lowPrice, closePrice, volume, openTime, isClosed, source);
         c.setId(this.id);
         c.setCreatedAt(this.createdAt);
         c.setUpdatedAt(this.updatedAt);
@@ -227,6 +270,7 @@ public class Candle {
                 ", V=" + volume +
                 ", time=" + openTime +
                 ", closed=" + isClosed +
+                ", source=" + source +
                 '}';
     }
 }

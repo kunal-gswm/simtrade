@@ -41,28 +41,32 @@ public class TimeframeTest {
     }
 
     @Test
-    public void testCandleStartBoundariesInUTC() {
-        // 2026-11-13T10:15:42Z (epoch 1794564942)
+    public void testCandleStartBoundariesInSessionIST() {
+        // 2026-11-13T10:15:42Z (In IST UTC+05:30: 2026-11-13 15:45:42 IST)
         Instant instant = Instant.parse("2026-11-13T10:15:42Z");
 
-        // 1m boundary -> 10:15:00Z
+        // 1m boundary -> 15:45:00 IST -> 10:15:00Z
         Instant start1m = Timeframe.ONE_MIN.getCandleStart(instant);
         assertEquals(Instant.parse("2026-11-13T10:15:00Z"), start1m);
 
-        // 5m boundary -> 10:15:00Z
+        // 5m boundary -> 15:45:00 IST -> 10:15:00Z
         Instant start5m = Timeframe.FIVE_MIN.getCandleStart(instant);
         assertEquals(Instant.parse("2026-11-13T10:15:00Z"), start5m);
 
-        // 15m boundary -> 10:15:00Z
+        // 15m boundary -> 15:45:00 IST -> 10:15:00Z
         Instant start15m = Timeframe.FIFTEEN_MIN.getCandleStart(instant);
         assertEquals(Instant.parse("2026-11-13T10:15:00Z"), start15m);
 
-        // 1h boundary -> 10:00:00Z
+        // 1h boundary in IST:
+        // Anchored to :15 past the hour. Since 15:45 has min 45 >= 15, candle starts at 15:15:00 IST
+        // 15:15:00 IST = 2026-11-13T09:45:00Z
         Instant start1h = Timeframe.ONE_HOUR.getCandleStart(instant);
-        assertEquals(Instant.parse("2026-11-13T10:00:00Z"), start1h);
+        assertEquals(Instant.parse("2026-11-13T09:45:00Z"), start1h);
 
-        // 1d boundary -> 00:00:00Z
+        // 1d boundary in IST:
+        // Anchored to regular session open at 09:15:00 IST
+        // 09:15:00 IST = 2026-11-13T03:45:00Z
         Instant start1d = Timeframe.ONE_DAY.getCandleStart(instant);
-        assertEquals(Instant.parse("2026-11-13T00:00:00Z"), start1d);
+        assertEquals(Instant.parse("2026-11-13T03:45:00Z"), start1d);
     }
 }
