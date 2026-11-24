@@ -6,6 +6,8 @@ import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
 import com.project.trading.exception.InvalidOrderException;
 import com.project.trading.model.Trade;
+import com.project.trading.order.model.Order;
+import com.project.trading.order.service.OrderService;
 import com.project.trading.service.order.BuyOrderExecutor;
 import com.project.trading.service.order.OrderExecutor;
 import com.project.trading.service.order.SellOrderExecutor;
@@ -17,6 +19,19 @@ import java.util.List;
 
 public class TradingService {
     private final TradeDAO tradeDAO = new TradeDAO();
+    private final OrderService orderService = new OrderService();
+
+    public Order placeAdvancedOrder(Order order) throws AppException {
+        return orderService.placeOrder(order);
+    }
+
+    public void cancelOrder(long orderId, long userId) throws AppException {
+        orderService.cancelOrder(orderId, userId);
+    }
+
+    public OrderService getOrderService() {
+        return orderService;
+    }
 
     public Trade buy(long userId, long stockId, int qty) throws AppException {
         return placeOrder(new BuyOrderExecutor(), userId, stockId, qty);

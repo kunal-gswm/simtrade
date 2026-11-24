@@ -2,6 +2,8 @@ package com.project.trading.service;
 
 import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.dao.CandleDAO;
+import com.project.trading.marketdata.model.MarketDataSource;
+import com.project.trading.marketdata.model.MarketQuote;
 import com.project.trading.model.Candle;
 import com.project.trading.model.MarketSessionCalendar;
 import com.project.trading.model.Timeframe;
@@ -137,9 +139,32 @@ public class CandleEngine {
     }
 
     /**
+     * Ingests a normalized MarketQuote from live provider or simulator and aggregates it into all supported timeframes.
+     */
+    public void onMarketQuote(MarketQuote quote) {
+        if (quote == null || quote.ltp() == null || quote.ltp().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        Instant tickTime = quote.exchangeTimestamp() != null ? quote.exchangeTimestamp() : quote.receivedTimestamp();
+        Candle.CandleSource candleSource = (quote.source() == MarketDataSource.LIVE_PROVIDER)
+                ? Candle.CandleSource.LIVE_PROVIDER
+                : Candle.CandleSource.SIMULATED_STREAM;
+        long volume = quote.volume() > 0 ? quote.volume() : calculateTickVolume(quote.stockId(), quote.ltp(), null);
+        onPriceTickInternal(quote.stockId(), quote.ltp(), volume, tickTime, candleSource);
+    }
+
+    /**
      * Ingests a price tick from PriceSimulator and aggregates it into all supported timeframes.
      */
     public void onPriceTick(long stockId, BigDecimal newPrice, BigDecimal prevPrice, Instant tickTime) {
+        if (newPrice == null || tickTime == null || newPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        long volume = calculateTickVolume(stockId, newPrice, prevPrice);
+        onPriceTickInternal(stockId, newPrice, volume, tickTime, Candle.CandleSource.SIMULATED_STREAM);
+    }
+
+    private void onPriceTickInternal(long stockId, BigDecimal newPrice, long volume, Instant tickTime, Candle.CandleSource source) {
         if (newPrice == null || tickTime == null || newPrice.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -149,8 +174,6 @@ public class CandleEngine {
             return;
         }
 
-        long volume = calculateTickVolume(stockId, newPrice, prevPrice);
-
         for (Timeframe tf : Timeframe.values()) {
             CandleKey key = new CandleKey(stockId, tf);
             Instant candleStart = tf.getCandleStart(tickTime);
@@ -159,7 +182,7 @@ public class CandleEngine {
             synchronized (this) {
                 Candle current = activeCandles.get(key);
                 if (current == null) {
-                    Candle newCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, Candle.CandleSource.SIMULATED_STREAM);
+                    Candle newCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, source);
                     activeCandles.put(key, newCandle);
                     candleToBroadcast = newCandle.copy();
                 } else if (current.getOpenTime().equals(candleStart)) {
@@ -171,7 +194,7 @@ public class CandleEngine {
                     persistenceQueue.add(current.copy());
 
                     // Start new candle for new boundary
-                    Candle nextCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, Candle.CandleSource.SIMULATED_STREAM);
+                    Candle nextCandle = Candle.createInitial(stockId, tf, newPrice, volume, candleStart, source);
                     activeCandles.put(key, nextCandle);
                     candleToBroadcast = nextCandle.copy();
                 }

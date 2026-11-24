@@ -12,6 +12,7 @@ import java.util.Objects;
 public class Candle {
 
     public enum CandleSource {
+        LIVE_PROVIDER,
         SYNTHETIC_BACKFILL,
         SIMULATED_STREAM,
         EXCHANGE_IMPORT;

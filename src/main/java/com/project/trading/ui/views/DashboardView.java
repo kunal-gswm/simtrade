@@ -158,7 +158,11 @@ public class DashboardView extends VerticalLayout {
             netWorthSubtext.setText(pnlSign + percentFormat.format(summary.totalReturnPct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)) + " return");
 
             // 2. Available Cash
-            cashValue.setText(currencyFormat.format(summary.cash));
+            if (summary.reservedCash.compareTo(BigDecimal.ZERO) > 0) {
+                cashValue.setText(currencyFormat.format(summary.availableCash));
+            } else {
+                cashValue.setText(currencyFormat.format(summary.cash));
+            }
 
             // 3. Current Holdings Value
             holdingsValue.setText(currencyFormat.format(summary.totalCurrentValue));
@@ -250,7 +254,14 @@ public class DashboardView extends VerticalLayout {
         portBtn.getElement().removeAttribute("theme");
         portLink.add(portBtn);
 
-        actions.add(marketLink, portLink);
+        RouterLink ordersLink = new RouterLink();
+        ordersLink.setRoute(OrdersView.class);
+        Button ordersBtn = new Button("Orders");
+        ordersBtn.addClassNames("st-btn", "st-btn-secondary");
+        ordersBtn.getElement().removeAttribute("theme");
+        ordersLink.add(ordersBtn);
+
+        actions.add(marketLink, ordersLink, portLink);
         headerContainer.add(titleGroup, actions);
 
         return headerContainer;

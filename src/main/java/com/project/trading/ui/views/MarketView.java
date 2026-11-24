@@ -3,10 +3,20 @@ package com.project.trading.ui.views;
 import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.exception.AppException;
 import com.project.trading.exception.DataAccessException;
+import com.project.trading.marketdata.model.MarketDataSource;
+import com.project.trading.marketdata.model.MarketDataStatus;
+import com.project.trading.marketdata.model.MarketQuote;
+import com.project.trading.marketdata.service.MarketDataConnectionManager;
 import com.project.trading.model.AuthUser;
 import com.project.trading.model.Portfolio;
 import com.project.trading.model.Stock;
 import com.project.trading.model.Trade;
+import com.project.trading.order.model.Order;
+import com.project.trading.order.model.OrderSide;
+import com.project.trading.order.model.OrderStatus;
+import com.project.trading.order.model.OrderType;
+import com.project.trading.order.model.OrderValidity;
+import com.project.trading.order.service.OrderService;
 import com.project.trading.service.PortfolioService;
 import com.project.trading.service.StockService;
 import com.project.trading.service.TradingService;
@@ -29,6 +39,8 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
@@ -38,6 +50,7 @@ import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.shared.Registration;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
@@ -51,9 +64,11 @@ public class MarketView extends Div {
     private final TradingService tradingService;
     private final SecurityService securityService;
     private final PortfolioService portfolioService;
+    private final OrderService orderService;
     private final Grid<Stock> grid;
     private final TextField searchField;
     private final ComboBox<String> sectorFilter;
+    private final Span feedStatusBadge;
     private final NumberFormat currencyFormat;
     private final NumberFormat percentFormat;
 
@@ -74,6 +89,8 @@ public class MarketView extends Div {
         this.tradingService = new TradingService();
         this.securityService = new SecurityService();
         this.portfolioService = new PortfolioService();
+        this.orderService = new OrderService();
+        this.feedStatusBadge = new Span();
         this.currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
         this.percentFormat = NumberFormat.getPercentInstance(new Locale("en", "IN"));
         this.percentFormat.setMinimumFractionDigits(2);
@@ -129,8 +146,11 @@ public class MarketView extends Div {
         sectorFilter.setItems(sectors);
         sectorFilter.addValueChangeListener(e -> updateList());
 
-        HorizontalLayout toolbar = new HorizontalLayout(searchField, sectorFilter);
-        toolbar.getStyle().set("margin-bottom", "16px").set("flex-wrap", "wrap");
+        feedStatusBadge.addClassName("st-brand-tag");
+        updateFeedBadge();
+
+        HorizontalLayout toolbar = new HorizontalLayout(searchField, sectorFilter, feedStatusBadge);
+        toolbar.getStyle().set("margin-bottom", "16px").set("flex-wrap", "wrap").set("align-items", "center");
 
         // Empty state
         emptyState = new Div();
@@ -171,6 +191,16 @@ public class MarketView extends Div {
         }).setHeader("Sector").setSortable(true).setAutoWidth(true);
 
         grid.addComponentColumn(stock -> {
+            MarketQuote quote = MarketDataConnectionManager.getInstance().getLatestQuote(stock.getId());
+            BigDecimal bid = (quote != null && quote.bidPrice() != null) ? quote.bidPrice() : stock.getPrice().subtract(new BigDecimal("0.05"));
+            BigDecimal ask = (quote != null && quote.askPrice() != null) ? quote.askPrice() : stock.getPrice().add(new BigDecimal("0.05"));
+            Span bidAsk = new Span("₹" + bid + " / ₹" + ask);
+            bidAsk.addClassName("tabular-num");
+            bidAsk.getStyle().set("font-size", "11px").set("color", "var(--st-text-secondary)");
+            return bidAsk;
+        }).setHeader("Bid / Ask").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+
+        grid.addComponentColumn(stock -> {
             Span price = new Span(currencyFormat.format(stock.getPrice()));
             price.addClassName("tabular-num");
             price.getStyle().set("font-weight", "600");
@@ -194,12 +224,23 @@ public class MarketView extends Div {
         }).setHeader("24h Change").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(stock -> {
+            Div tradeBtns = new Div();
+            tradeBtns.getStyle().set("display", "flex").set("gap", "4px").set("justify-content", "flex-end");
+
             Button buyBtn = new Button("Buy");
             buyBtn.addClassNames("st-btn", "st-btn-buy");
             buyBtn.getElement().removeAttribute("theme");
-            buyBtn.getStyle().set("height", "28px").set("font-size", "12px").set("padding", "0 12px");
-            buyBtn.addClickListener(e -> openBuyDialog(stock));
-            return buyBtn;
+            buyBtn.getStyle().set("height", "26px").set("font-size", "11px").set("padding", "0 10px");
+            buyBtn.addClickListener(e -> openTradeDialog(stock, OrderSide.BUY));
+
+            Button sellBtn = new Button("Sell");
+            sellBtn.addClassNames("st-btn", "st-btn-sell");
+            sellBtn.getElement().removeAttribute("theme");
+            sellBtn.getStyle().set("height", "26px").set("font-size", "11px").set("padding", "0 10px");
+            sellBtn.addClickListener(e -> openTradeDialog(stock, OrderSide.SELL));
+
+            tradeBtns.add(buyBtn, sellBtn);
+            return tradeBtns;
         }).setHeader("Trade").setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         tableContainer = new Div(grid);
@@ -297,6 +338,21 @@ public class MarketView extends Div {
                 cashValue.setText(currencyFormat.format(summary.cash));
             } catch (DataAccessException ignored) { }
         }
+        updateFeedBadge();
+    }
+
+    private void updateFeedBadge() {
+        MarketDataConnectionManager mgr = MarketDataConnectionManager.getInstance();
+        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER && mgr.getStatus() == MarketDataStatus.CONNECTED) {
+            feedStatusBadge.setText("● LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED"));
+            feedStatusBadge.getStyle().set("color", "var(--st-jade)").set("border-color", "var(--st-jade)");
+        } else if (mgr.getStatus() == MarketDataStatus.NOT_CONFIGURED) {
+            feedStatusBadge.setText("● LIVE FEED: NOT CONFIGURED");
+            feedStatusBadge.getStyle().set("color", "var(--st-ruby)").set("border-color", "var(--st-ruby)");
+        } else {
+            feedStatusBadge.setText("● SIMULATED DATA STREAM");
+            feedStatusBadge.getStyle().set("color", "var(--st-copper)").set("border-color", "var(--st-copper)");
+        }
     }
 
     private void updateList() {
@@ -331,7 +387,7 @@ public class MarketView extends Div {
         }
     }
 
-    private void openBuyDialog(Stock stock) {
+    private void openTradeDialog(Stock stock, OrderSide initialSide) {
         AuthUser user = securityService.getAuthenticatedUser();
         if (user == null) {
             Notification.show("Please log in to trade.");
@@ -339,140 +395,204 @@ public class MarketView extends Div {
         }
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle("Buy Order · " + stock.getSymbol());
-        dialog.setWidth("min(420px, 94vw)");
+        dialog.setHeaderTitle("Order Entry · " + stock.getSymbol());
+        dialog.setWidth("min(460px, 94vw)");
 
         VerticalLayout layout = new VerticalLayout();
         layout.setPadding(false);
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        Span companySpan = new Span(stock.getCompanyName());
-        companySpan.getStyle().set("font-size", "13px").set("color", "var(--st-text-secondary)").set("margin-bottom", "14px").set("display", "block");
+        Span companySpan = new Span(stock.getCompanyName() + " (NSE: " + stock.getSymbol() + ")");
+        companySpan.getStyle().set("font-size", "12px").set("color", "var(--st-text-secondary)").set("margin-bottom", "12px").set("display", "block");
 
-        // Price row
-        Div priceRow = new Div();
-        priceRow.addClassName("st-dialog-row");
-        Span priceLabel = new Span("Indicative Price (LTP)");
-        priceLabel.addClassName("st-dialog-row-label");
-        Span priceValue = new Span(currencyFormat.format(stock.getPrice()));
-        priceValue.addClassName("st-dialog-row-value");
-        priceRow.add(priceLabel, priceValue);
+        // Side selector (BUY / SELL toggle)
+        HorizontalLayout sideLayout = new HorizontalLayout();
+        sideLayout.setWidthFull();
+        sideLayout.getStyle().set("margin-bottom", "12px");
 
-        // Cash row
-        Div cashRow = new Div();
-        cashRow.addClassName("st-dialog-row");
-        Span cashLabel = new Span("Available Cash");
-        cashLabel.addClassName("st-dialog-row-label");
-        Span cashVal = new Span("-");
-        cashVal.addClassName("st-dialog-row-value");
-        BigDecimal currentCash = BigDecimal.ZERO;
-        try {
-            Portfolio p = portfolioService.getPortfolioForUser(user.getId());
-            PortfolioService.PortfolioSummary s = portfolioService.buildSummary(p);
-            currentCash = s.cash;
-            cashVal.setText(currencyFormat.format(currentCash));
-        } catch (DataAccessException ignored) { }
-        cashRow.add(cashLabel, cashVal);
+        final OrderSide[] currentSide = new OrderSide[]{initialSide};
+        Button buyToggle = new Button("BUY");
+        Button sellToggle = new Button("SELL");
+        buyToggle.setWidth("50%");
+        sellToggle.setWidth("50%");
 
-        // Quantity input
-        IntegerField qtyField = new IntegerField("Order Quantity (Shares)");
+        Runnable updateToggleStyles = () -> {
+            if (currentSide[0] == OrderSide.BUY) {
+                buyToggle.addClassNames("st-btn", "st-btn-buy");
+                buyToggle.getStyle().set("opacity", "1.0");
+                sellToggle.addClassNames("st-btn", "st-btn-secondary");
+                sellToggle.removeClassName("st-btn-sell");
+                sellToggle.getStyle().set("opacity", "0.6");
+            } else {
+                sellToggle.addClassNames("st-btn", "st-btn-sell");
+                sellToggle.getStyle().set("opacity", "1.0");
+                buyToggle.addClassNames("st-btn", "st-btn-secondary");
+                buyToggle.removeClassName("st-btn-buy");
+                buyToggle.getStyle().set("opacity", "0.6");
+            }
+        };
+        updateToggleStyles.run();
+
+        buyToggle.addClickListener(e -> {
+            currentSide[0] = OrderSide.BUY;
+            updateToggleStyles.run();
+        });
+        sellToggle.addClickListener(e -> {
+            currentSide[0] = OrderSide.SELL;
+            updateToggleStyles.run();
+        });
+        sideLayout.add(buyToggle, sellToggle);
+
+        // Order Type Selector
+        Select<OrderType> orderTypeSelect = new Select<>();
+        orderTypeSelect.setLabel("Order Type");
+        orderTypeSelect.setItems(OrderType.values());
+        orderTypeSelect.setItemLabelGenerator(OrderType::getDisplayName);
+        orderTypeSelect.setValue(OrderType.MARKET);
+        orderTypeSelect.setWidthFull();
+
+        // Validity Selector
+        Select<OrderValidity> validitySelect = new Select<>();
+        validitySelect.setLabel("Order Validity");
+        validitySelect.setItems(OrderValidity.values());
+        validitySelect.setItemLabelGenerator(OrderValidity::getLabel);
+        validitySelect.setValue(OrderValidity.DAY);
+        validitySelect.setWidthFull();
+
+        // Quantity Field
+        IntegerField qtyField = new IntegerField("Quantity (Shares)");
         qtyField.setMin(1);
-        qtyField.setMax(100000);
+        qtyField.setMax(10000);
         qtyField.setStepButtonsVisible(true);
         qtyField.setValue(1);
-        qtyField.setRequiredIndicatorVisible(true);
         qtyField.setWidthFull();
-        qtyField.getStyle().set("margin-top", "12px");
 
-        // Estimated order summary
+        // Dynamic price inputs
+        BigDecimalField limitPriceField = new BigDecimalField("Limit Price (₹)");
+        limitPriceField.setValue(stock.getPrice());
+        limitPriceField.setWidthFull();
+        limitPriceField.setVisible(false);
+
+        BigDecimalField triggerPriceField = new BigDecimalField("Trigger Price (₹)");
+        triggerPriceField.setValue(stock.getPrice());
+        triggerPriceField.setWidthFull();
+        triggerPriceField.setVisible(false);
+
+        BigDecimalField targetPriceField = new BigDecimalField("Target Exit Price (₹)");
+        targetPriceField.setValue(stock.getPrice().multiply(new BigDecimal("1.05")).setScale(2, RoundingMode.HALF_UP));
+        targetPriceField.setWidthFull();
+        targetPriceField.setVisible(false);
+
+        BigDecimalField stopLossField = new BigDecimalField("Stop-Loss Exit Price (₹)");
+        stopLossField.setValue(stock.getPrice().multiply(new BigDecimal("0.95")).setScale(2, RoundingMode.HALF_UP));
+        stopLossField.setWidthFull();
+        stopLossField.setVisible(false);
+
+        Runnable updateFieldVisibility = () -> {
+            OrderType type = orderTypeSelect.getValue();
+            limitPriceField.setVisible(type == OrderType.LIMIT || type == OrderType.STOP_LOSS_LIMIT || type == OrderType.BRACKET);
+            triggerPriceField.setVisible(type == OrderType.STOP_LOSS_MARKET || type == OrderType.STOP_LOSS_LIMIT);
+            targetPriceField.setVisible(type == OrderType.TARGET || type == OrderType.BRACKET);
+            stopLossField.setVisible(type == OrderType.BRACKET);
+        };
+        orderTypeSelect.addValueChangeListener(e -> updateFieldVisibility.run());
+
+        // Price and Availability row
+        Div liquidityRow = new Div();
+        liquidityRow.addClassName("st-dialog-row");
+        Span ltpLabel = new Span("LTP / Reference");
+        ltpLabel.addClassName("st-dialog-row-label");
+        Span ltpVal = new Span(currencyFormat.format(stock.getPrice()));
+        ltpVal.addClassName("st-dialog-row-value");
+        liquidityRow.add(ltpLabel, ltpVal);
+
         Div estDiv = new Div();
         estDiv.addClassName("st-dialog-estimate");
+        estDiv.getStyle().set("margin-top", "12px");
 
         Div estRow = new Div();
         estRow.addClassName("st-dialog-row");
         Span estLabel = new Span("Estimated Order Value");
         estLabel.addClassName("st-dialog-row-label");
-        Span estValue = new Span(currencyFormat.format(stock.getPrice()));
-        estValue.addClassName("st-dialog-row-value");
-        estRow.add(estLabel, estValue);
+        Span estVal = new Span(currencyFormat.format(stock.getPrice()));
+        estVal.addClassName("st-dialog-row-value");
+        estRow.add(estLabel, estVal);
 
-        Div remCashRow = new Div();
-        remCashRow.addClassName("st-dialog-row");
-        Span remCashLabel = new Span("Estimated Remaining Cash");
-        remCashLabel.addClassName("st-dialog-row-label");
-        Span remCashValue = new Span("-");
-        remCashValue.addClassName("st-dialog-row-value");
-        remCashRow.add(remCashLabel, remCashValue);
-
-        final BigDecimal userCash = currentCash;
-        BigDecimal initialRemaining = userCash.subtract(stock.getPrice());
-        remCashValue.setText(currencyFormat.format(initialRemaining));
-        if (initialRemaining.compareTo(BigDecimal.ZERO) < 0) {
-            remCashValue.addClassName("st-negative");
-        }
-
-        estDiv.add(estRow, remCashRow);
+        estDiv.add(estRow);
 
         qtyField.addValueChangeListener(e -> {
             if (e.getValue() != null && e.getValue() > 0) {
-                BigDecimal totalCost = stock.getPrice().multiply(new BigDecimal(e.getValue()));
-                estValue.setText(currencyFormat.format(totalCost));
-                BigDecimal remaining = userCash.subtract(totalCost);
-                remCashValue.setText(currencyFormat.format(remaining));
-                if (remaining.compareTo(BigDecimal.ZERO) < 0) {
-                    remCashValue.addClassName("st-negative");
-                } else {
-                    remCashValue.removeClassName("st-negative");
-                }
+                BigDecimal p = limitPriceField.isVisible() && limitPriceField.getValue() != null ? limitPriceField.getValue() : stock.getPrice();
+                BigDecimal total = p.multiply(new BigDecimal(e.getValue())).setScale(2, RoundingMode.HALF_UP);
+                estVal.setText(currencyFormat.format(total));
+            }
+        });
+        limitPriceField.addValueChangeListener(e -> {
+            if (e.getValue() != null && qtyField.getValue() != null) {
+                BigDecimal total = e.getValue().multiply(new BigDecimal(qtyField.getValue())).setScale(2, RoundingMode.HALF_UP);
+                estVal.setText(currencyFormat.format(total));
             }
         });
 
-        Span note = new Span("Settlement Notice: Execution price is settled on the server at time of receipt.");
+        Span note = new Span("Execution Notice: Orders execute in simulated paper mode according to institutional rules.");
         note.addClassName("st-dialog-note");
 
-        layout.add(companySpan, priceRow, cashRow, qtyField, estDiv, note);
+        layout.add(companySpan, sideLayout, orderTypeSelect, validitySelect, qtyField,
+                limitPriceField, triggerPriceField, targetPriceField, stopLossField,
+                liquidityRow, estDiv, note);
         dialog.add(layout);
 
         Button cancelBtn = new Button("Cancel", e -> dialog.close());
         cancelBtn.addClassNames("st-btn", "st-btn-secondary");
-        cancelBtn.getElement().removeAttribute("theme");
 
-        Button confirmBtn = new Button("Execute Buy Order");
-        confirmBtn.addClassNames("st-btn", "st-btn-buy");
-        confirmBtn.getElement().removeAttribute("theme");
+        Button submitBtn = new Button("Submit Order");
+        submitBtn.addClassNames("st-btn", "st-btn-primary");
 
-        confirmBtn.addClickListener(e -> {
+        submitBtn.addClickListener(e -> {
             Integer qty = qtyField.getValue();
             if (qty == null || qty < 1) {
                 Notification.show("Please enter a valid share quantity.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
-            confirmBtn.setEnabled(false);
-            confirmBtn.setText("Executing...");
+
+            Order order = new Order();
+            order.setUserId(user.getId());
+            order.setStockId(stock.getId());
+            order.setSide(currentSide[0]);
+            order.setOrderType(orderTypeSelect.getValue());
+            order.setValidity(validitySelect.getValue());
+            order.setQuantity(qty);
+
+            if (limitPriceField.isVisible()) order.setLimitPrice(limitPriceField.getValue());
+            if (triggerPriceField.isVisible()) order.setTriggerPrice(triggerPriceField.getValue());
+            if (targetPriceField.isVisible()) order.setTargetPrice(targetPriceField.getValue());
+            if (stopLossField.isVisible()) order.setStopLossPrice(stopLossField.getValue());
+
+            submitBtn.setEnabled(false);
+            submitBtn.setText("Submitting...");
 
             try {
-                Trade trade = tradingService.buy(user.getId(), stock.getId(), qty);
-                Notification.show("Executed BUY: " + trade.getQuantity() + " shares of " + trade.getStockSymbol() +
-                                " at " + currencyFormat.format(trade.getPrice()) + " (Total: " + currencyFormat.format(trade.getTotalAmount()) + ")",
-                        5000, Notification.Position.BOTTOM_CENTER)
+                Order placed = orderService.placeOrder(order);
+                String msg = "Order #" + placed.getId() + " (" + placed.getOrderType().getDisplayName() + " " + placed.getSide() + ") placed successfully. Status: " + placed.getStatus().getDisplayName();
+                Notification.show(msg, 5000, Notification.Position.BOTTOM_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 dialog.close();
                 updateSummary();
             } catch (AppException ex) {
-                Notification.show("Execution rejected: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                Notification.show("Order rejected: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } catch (Exception ex) {
-                Notification.show("Order processing error.", 5000, Notification.Position.MIDDLE)
+                Notification.show("Order processing error: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } finally {
-                confirmBtn.setEnabled(true);
-                confirmBtn.setText("Execute Buy");
+                submitBtn.setEnabled(true);
+                submitBtn.setText("Submit Order");
             }
         });
 
-        dialog.getFooter().add(cancelBtn, confirmBtn);
+        dialog.getFooter().add(cancelBtn, submitBtn);
         dialog.open();
     }
 }

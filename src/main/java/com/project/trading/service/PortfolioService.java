@@ -7,6 +7,8 @@ import com.project.trading.exception.DataAccessException;
 import com.project.trading.model.Holding;
 import com.project.trading.model.Portfolio;
 import com.project.trading.model.User;
+import com.project.trading.order.dao.FillDAO;
+import com.project.trading.order.dao.ReservationDAO;
 import com.project.trading.util.DBConnection;
 
 import java.math.BigDecimal;
@@ -26,6 +28,8 @@ public class PortfolioService {
     private final HoldingDAO holdingDAO = new HoldingDAO();
     private final UserDAO userDAO = new UserDAO();
     private final TradeDAO tradeDAO = new TradeDAO();
+    private final ReservationDAO reservationDAO = new ReservationDAO();
+    private final FillDAO fillDAO = new FillDAO();
 
     /**
      * Loads the real database-backed portfolio for the given user ID.
@@ -54,7 +58,7 @@ public class PortfolioService {
 
     /**
      * Loads portfolio and trades atomically in a single connection,
-     * building the fully calculated PortfolioSummary with real realized P&L.
+     * building the fully calculated PortfolioSummary with real realized P&L and reservations.
      */
     public PortfolioSummary getSummaryForUser(long userId) {
         try (Connection c = DBConnection.getConnection()) {
@@ -71,8 +75,11 @@ public class PortfolioService {
                 }
             }
             BigDecimal realizedPnl = tradeDAO.sumRealizedPnl(c, userId);
+            BigDecimal reservedCash = reservationDAO.getTotalReservedFunds(c, userId);
+            BigDecimal totalFees = fillDAO.sumFeesByUser(c, userId);
+
             Portfolio portfolio = new Portfolio((int) userId, user.getCashBalance(), holdings);
-            return buildSummary(portfolio, realizedPnl);
+            return buildSummary(portfolio, realizedPnl, reservedCash, totalFees);
         } catch (SQLException e) {
             throw new DataAccessException("Failed to load portfolio summary from database.", e);
         }
@@ -84,27 +91,42 @@ public class PortfolioService {
      */
     public PortfolioSummary buildSummary(Portfolio portfolio) {
         BigDecimal realizedPnl = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal reservedCash = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalFees = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         if (portfolio.getUserId() > 0) {
             try (Connection c = DBConnection.getConnection()) {
                 realizedPnl = tradeDAO.sumRealizedPnl(c, portfolio.getUserId());
+                reservedCash = reservationDAO.getTotalReservedFunds(c, portfolio.getUserId());
+                totalFees = fillDAO.sumFeesByUser(c, portfolio.getUserId());
             } catch (Exception ignored) {
                 // In mock test mode or non-DB context, default to ZERO
             }
         }
-        return buildSummary(portfolio, realizedPnl);
+        return buildSummary(portfolio, realizedPnl, reservedCash, totalFees);
     }
 
     /**
      * Builds a fully computed PortfolioSummary with explicitly supplied realized P&L.
      */
     public PortfolioSummary buildSummary(Portfolio portfolio, BigDecimal realizedPnl) {
+        return buildSummary(portfolio, realizedPnl, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    /**
+     * Builds a fully computed PortfolioSummary with explicitly supplied realized P&L,
+     * reserved cash, and fees.
+     */
+    public PortfolioSummary buildSummary(Portfolio portfolio, BigDecimal realizedPnl, BigDecimal reservedCash, BigDecimal totalFees) {
         BigDecimal cash = portfolio.getCash();
         if (cash == null) {
             cash = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
         BigDecimal safeRealizedPnl = realizedPnl != null ? realizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal safeReservedCash = reservedCash != null ? reservedCash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal safeFees = totalFees != null ? totalFees.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
+        BigDecimal availableCash = cash.subtract(safeReservedCash).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalInvested = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalCurrentValue = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -112,6 +134,14 @@ public class PortfolioService {
 
         for (Holding h : portfolio.getHoldings()) {
             int qty = h.getQuantity();
+            int reservedQty = 0;
+            if (portfolio.getUserId() > 0) {
+                try (Connection c = DBConnection.getConnection()) {
+                    reservedQty = reservationDAO.getTotalReservedHoldings(c, portfolio.getUserId(), h.getStockId());
+                } catch (Exception ignored) {}
+            }
+            int availableQty = Math.max(0, qty - reservedQty);
+
             BigDecimal avgBuyPrice = h.getAvgBuyPrice() != null ? h.getAvgBuyPrice() : BigDecimal.ZERO;
             BigDecimal currentPrice = h.getCurrentPriceBigDecimal() != null ? h.getCurrentPriceBigDecimal() : avgBuyPrice;
 
@@ -125,6 +155,8 @@ public class PortfolioService {
                     h.getStockSymbol(),
                     h.getStockName(),
                     h.getQuantity(),
+                    reservedQty,
+                    availableQty,
                     avgBuyPrice,
                     currentPrice,
                     invested,
@@ -140,17 +172,22 @@ public class PortfolioService {
         BigDecimal totalUnrealizedPnl = PnLCalculator.calculateUnrealizedPnl(totalCurrentValue, totalInvested);
         BigDecimal netWorth = PnLCalculator.calculateNetWorth(cash, totalCurrentValue);
         BigDecimal overallPnl = safeRealizedPnl.add(totalUnrealizedPnl).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netPnl = overallPnl.subtract(safeFees).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalReturnPct = PnLCalculator.calculateUnrealizedPct(totalUnrealizedPnl, totalInvested);
 
         return new PortfolioSummary(
                 rows,
                 cash,
+                safeReservedCash,
+                availableCash,
                 totalInvested,
                 totalCurrentValue,
                 totalUnrealizedPnl,
                 safeRealizedPnl,
+                safeFees,
                 netWorth,
                 overallPnl,
+                netPnl,
                 totalReturnPct
         );
     }
@@ -163,6 +200,8 @@ public class PortfolioService {
         public final String symbol;
         public final String companyName;
         public final int quantity;
+        public final int reservedQuantity;
+        public final int availableQuantity;
         public final BigDecimal avgBuyPrice;
         public final BigDecimal currentPrice;
         public final BigDecimal invested;
@@ -171,26 +210,37 @@ public class PortfolioService {
         public final BigDecimal unrealizedPct;
 
         public HoldingRow(long stockId, String symbol, String companyName, int quantity,
+                          int reservedQuantity, int availableQuantity,
                           BigDecimal avgBuyPrice, BigDecimal currentPrice,
                           BigDecimal invested, BigDecimal currentValue,
                           BigDecimal unrealizedPnl, BigDecimal unrealizedPct) {
-            this.stockId       = stockId;
-            this.symbol        = symbol;
-            this.companyName   = companyName;
-            this.quantity      = quantity;
-            this.avgBuyPrice   = avgBuyPrice != null ? avgBuyPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.currentPrice  = currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.invested      = invested != null ? invested.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.currentValue  = currentValue != null ? currentValue.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.unrealizedPnl = unrealizedPnl != null ? unrealizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.unrealizedPct = unrealizedPct != null ? unrealizedPct.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.stockId           = stockId;
+            this.symbol            = symbol;
+            this.companyName       = companyName;
+            this.quantity          = quantity;
+            this.reservedQuantity  = reservedQuantity;
+            this.availableQuantity = availableQuantity;
+            this.avgBuyPrice       = avgBuyPrice != null ? avgBuyPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.currentPrice      = currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.invested          = invested != null ? invested.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.currentValue      = currentValue != null ? currentValue.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.unrealizedPnl     = unrealizedPnl != null ? unrealizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.unrealizedPct     = unrealizedPct != null ? unrealizedPct.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        public HoldingRow(long stockId, String symbol, String companyName, int quantity,
+                          BigDecimal avgBuyPrice, BigDecimal currentPrice,
+                          BigDecimal invested, BigDecimal currentValue,
+                          BigDecimal unrealizedPnl, BigDecimal unrealizedPct) {
+            this(stockId, symbol, companyName, quantity, 0, quantity,
+                 avgBuyPrice, currentPrice, invested, currentValue, unrealizedPnl, unrealizedPct);
         }
 
         public HoldingRow(long stockId, String symbol, String companyName, int quantity,
                           double avgBuyPrice, double currentPrice,
                           double invested, double currentValue,
                           double unrealizedPnl, double unrealizedPct) {
-            this(stockId, symbol, companyName, quantity,
+            this(stockId, symbol, companyName, quantity, 0, quantity,
                  BigDecimal.valueOf(avgBuyPrice), BigDecimal.valueOf(currentPrice),
                  BigDecimal.valueOf(invested), BigDecimal.valueOf(currentValue),
                  BigDecimal.valueOf(unrealizedPnl), BigDecimal.valueOf(unrealizedPct));
@@ -212,28 +262,46 @@ public class PortfolioService {
     public static class PortfolioSummary {
         public final List<HoldingRow> rows;
         public final BigDecimal cash;
+        public final BigDecimal reservedCash;
+        public final BigDecimal availableCash;
         public final BigDecimal totalInvested;
         public final BigDecimal totalCurrentValue;
         public final BigDecimal totalUnrealizedPnl;
         public final BigDecimal realizedPnl;
+        public final BigDecimal totalFees;
         public final BigDecimal netWorth;
         public final BigDecimal overallPnl;
+        public final BigDecimal netPnl;
         public final BigDecimal totalReturnPct;
+
+        public PortfolioSummary(List<HoldingRow> rows,
+                                BigDecimal cash, BigDecimal reservedCash, BigDecimal availableCash,
+                                BigDecimal totalInvested, BigDecimal totalCurrentValue,
+                                BigDecimal totalUnrealizedPnl, BigDecimal realizedPnl, BigDecimal totalFees,
+                                BigDecimal netWorth, BigDecimal overallPnl, BigDecimal netPnl,
+                                BigDecimal totalReturnPct) {
+            this.rows               = rows != null ? rows : Collections.emptyList();
+            this.cash               = cash != null ? cash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.reservedCash       = reservedCash != null ? reservedCash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.availableCash      = availableCash != null ? availableCash.setScale(2, RoundingMode.HALF_UP) : this.cash;
+            this.totalInvested      = totalInvested != null ? totalInvested.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.totalCurrentValue  = totalCurrentValue != null ? totalCurrentValue.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.totalUnrealizedPnl = totalUnrealizedPnl != null ? totalUnrealizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.realizedPnl        = realizedPnl != null ? realizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.totalFees          = totalFees != null ? totalFees.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.netWorth           = netWorth != null ? netWorth.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.overallPnl         = overallPnl != null ? overallPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this.netPnl             = netPnl != null ? netPnl.setScale(2, RoundingMode.HALF_UP) : this.overallPnl;
+            this.totalReturnPct     = totalReturnPct != null ? totalReturnPct.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
 
         public PortfolioSummary(List<HoldingRow> rows,
                                 BigDecimal cash, BigDecimal totalInvested,
                                 BigDecimal totalCurrentValue, BigDecimal totalUnrealizedPnl,
                                 BigDecimal realizedPnl, BigDecimal netWorth, BigDecimal overallPnl,
                                 BigDecimal totalReturnPct) {
-            this.rows               = rows != null ? rows : Collections.emptyList();
-            this.cash               = cash != null ? cash.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.totalInvested      = totalInvested != null ? totalInvested.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.totalCurrentValue  = totalCurrentValue != null ? totalCurrentValue.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.totalUnrealizedPnl = totalUnrealizedPnl != null ? totalUnrealizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.realizedPnl        = realizedPnl != null ? realizedPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.netWorth           = netWorth != null ? netWorth.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.overallPnl         = overallPnl != null ? overallPnl.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            this.totalReturnPct     = totalReturnPct != null ? totalReturnPct.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            this(rows, cash, BigDecimal.ZERO, cash, totalInvested, totalCurrentValue, totalUnrealizedPnl,
+                 realizedPnl, BigDecimal.ZERO, netWorth, overallPnl, overallPnl, totalReturnPct);
         }
 
         public PortfolioSummary(List<HoldingRow> rows,
