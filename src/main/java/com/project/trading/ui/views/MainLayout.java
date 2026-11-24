@@ -49,10 +49,11 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             "const syncMode = () => {" +
             "  const isMobile = window.innerWidth <= 1024;" +
             "  if (isMobile) {" +
+            "    al.setAttribute('overlay', '');" +
+            "    al.overlay = true;" +
             "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'true');" +
             "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '0px');" +
             "    if (typeof al._setOverlay === 'function') al._setOverlay(true);" +
-            "    else al.setAttribute('overlay', '');" +
             "    if (al.__wasDesktop || al.__wasDesktop === undefined) {" +
             "      al.drawerOpened = false;" +
             "    }" +
@@ -62,9 +63,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             "    const wasMobile = (al.__wasDesktop === false);" +
             "    const isInitial = (al.__wasDesktop === undefined);" +
             "    al.__wasDesktop = true;" +
+            "    al.removeAttribute('overlay');" +
+            "    al.overlay = false;" +
             "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'false');" +
             "    if (typeof al._setOverlay === 'function') al._setOverlay(false);" +
-            "    else al.removeAttribute('overlay');" +
             "    if (isInitial || wasMobile) {" +
             "      al.drawerOpened = true;" +
             "    }" +
@@ -73,6 +75,15 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             "};" +
             "window.addEventListener('resize', syncMode);" +
             "window.addEventListener('close-overlay-drawer', () => { al.drawerOpened = false; });" +
+            "document.addEventListener('click', (e) => {" +
+            "  if (al.drawerOpened && window.innerWidth <= 1024) {" +
+            "    const drawer = al.querySelector('[slot=\"drawer\"]');" +
+            "    const toggle = al.querySelector('vaadin-drawer-toggle');" +
+            "    if (drawer && !drawer.contains(e.target) && (!toggle || !toggle.contains(e.target))) {" +
+            "      al.drawerOpened = false;" +
+            "    }" +
+            "  }" +
+            "});" +
             "requestAnimationFrame(syncMode);" +
             "setTimeout(syncMode, 50);" +
             "setTimeout(syncMode, 200);"
@@ -183,7 +194,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         closeBtn.getElement().setAttribute("title", "Collapse sidebar");
         closeBtn.getElement().removeAttribute("theme");
         closeBtn.addClickListener(e -> setDrawerOpened(false));
-        closeBtn.getElement().executeJs("this.addEventListener('click', () => { const al = this.closest('vaadin-app-layout'); if (al) al.drawerOpened = false; });");
+        closeBtn.getElement().executeJs("this.addEventListener('click', (e) => { e.stopPropagation(); const al = this.closest('vaadin-app-layout'); if (al) al.drawerOpened = false; });");
 
         brand.add(brandLeft, closeBtn);
 

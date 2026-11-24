@@ -8,8 +8,7 @@ import com.vaadin.flow.theme.Theme;
 import com.vaadin.flow.theme.lumo.Lumo;
 
 @Push
-@Theme(themeClass = Lumo.class, variant = Lumo.DARK)
-@CssImport("./styles/simtrade.css")
+@Theme(value = "simtrade", variant = Lumo.DARK)
 public class AppShell implements AppShellConfigurator {
 
     @Override
