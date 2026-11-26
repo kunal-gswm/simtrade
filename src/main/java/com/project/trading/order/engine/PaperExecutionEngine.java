@@ -126,6 +126,17 @@ public class PaperExecutionEngine implements MarketDataListener {
         try (Connection c = DBConnection.getConnection()) {
             c.setAutoCommit(false);
             try {
+                // Canonical lock ordering: If order belongs to a bracket group, lock parent order first
+                // to serialize concurrent executions across sibling exit legs and prevent deadlocks
+                Order orderPeek = orderDAO.findById(c, orderId);
+                if (orderPeek == null || orderPeek.getStatus().isTerminal()) {
+                    c.rollback();
+                    return;
+                }
+                if (orderPeek.getParentOrderId() != null) {
+                    orderDAO.findByIdForUpdate(c, orderPeek.getParentOrderId());
+                }
+
                 Order order = orderDAO.findByIdForUpdate(c, orderId);
                 if (order == null || order.getStatus().isTerminal()) {
                     c.rollback();

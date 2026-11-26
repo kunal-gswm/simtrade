@@ -253,7 +253,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private Component createSvgIcon(String svgData) {
         Span span = new Span();
         span.getElement().setProperty("innerHTML", svgData);
-        span.getStyle().set("display", "inline-flex").set("align-items", "center").set("justify-content", "center");
+        span.getStyle().set("display", "inline-flex").set("align-items", "center").set("justify-content", "center").set("pointer-events", "none");
         return span;
     }
 
