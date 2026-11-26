@@ -165,18 +165,17 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
 
     @Override
     public synchronized void disconnect() {
-        if (running.compareAndSet(true, false)) {
-            stopSchedulers();
-            if (webSocket != null) {
-                try {
-                    webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Normal disconnect").join();
-                } catch (Throwable ignored) {
-                    webSocket.abort();
-                }
-                webSocket = null;
+        running.set(false);
+        stopSchedulers();
+        if (webSocket != null) {
+            try {
+                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Normal disconnect").join();
+            } catch (Throwable ignored) {
+                webSocket.abort();
             }
-            setStatus(MarketDataStatus.DISCONNECTED, "DhanHQ live feed disconnected");
+            webSocket = null;
         }
+        setStatus(MarketDataStatus.DISCONNECTED, "DhanHQ live feed disconnected");
     }
 
     @Override
@@ -200,13 +199,13 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
     }
 
     /**
-     * Sends official DhanHQ v2 JSON subscription payload over active WebSocket.
+     * Builds official DhanHQ v2 JSON subscription payload.
      * RequestCode 15: Subscribe
      * RequestCode 16: Unsubscribe
      */
-    public boolean sendSubscriptionMessage(List<Long> stockIds, int requestCode) {
-        if (stockIds == null || stockIds.isEmpty() || webSocket == null) {
-            return false;
+    public String buildSubscriptionJson(List<Long> stockIds, int requestCode) {
+        if (stockIds == null || stockIds.isEmpty()) {
+            return null;
         }
 
         List<InstrumentMappingService.InstrumentMapping> instruments = new ArrayList<>();
@@ -215,7 +214,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         }
 
         if (instruments.isEmpty()) {
-            return false;
+            return null;
         }
 
         StringBuilder json = new StringBuilder();
@@ -229,9 +228,26 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
             json.append("{\"ExchangeSegment\":\"").append(inst.segment()).append("\",\"SecurityId\":\"").append(inst.providerSecurityId()).append("\"}");
         }
         json.append("]}");
+        return json.toString();
+    }
+
+    /**
+     * Sends official DhanHQ v2 JSON subscription payload over active WebSocket.
+     * RequestCode 15: Subscribe
+     * RequestCode 16: Unsubscribe
+     */
+    public boolean sendSubscriptionMessage(List<Long> stockIds, int requestCode) {
+        if (stockIds == null || stockIds.isEmpty() || webSocket == null) {
+            return false;
+        }
+
+        String json = buildSubscriptionJson(stockIds, requestCode);
+        if (json == null) {
+            return false;
+        }
 
         try {
-            webSocket.sendText(json.toString(), true);
+            webSocket.sendText(json, true);
             return true;
         } catch (Throwable t) {
             System.err.println("[DhanLiveMarketDataProvider] Failed to send subscription payload: " + t.getMessage());
