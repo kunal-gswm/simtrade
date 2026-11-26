@@ -93,6 +93,17 @@ public class OrderService {
                     throw new InvalidOrderException("Order value ₹" + estimatedTurnover + " exceeds maximum allowed ₹" + MAX_ORDER_VALUE);
                 }
 
+                // Enforce quote availability and freshness for MARKET orders
+                if (order.getOrderType() == OrderType.MARKET) {
+                    MarketQuote latest = MarketDataConnectionManager.getInstance().getLatestQuote(order.getStockId());
+                    if (latest == null) {
+                        throw new InvalidOrderException("Market order rejected: Live market quotes currently unavailable for " + stock.getSymbol());
+                    }
+                    if (latest.isStale() || MarketDataConnectionManager.getInstance().isStale(order.getStockId())) {
+                        throw new InvalidOrderException("Market order rejected: Market data feed is stale (>15s since last tick) for " + stock.getSymbol());
+                    }
+                }
+
                 // 4. Handle Reservations
                 if (order.getSide() == OrderSide.BUY) {
                     BigDecimal existingReserved = reservationDAO.getTotalReservedFunds(c, user.getId());

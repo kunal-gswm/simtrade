@@ -8,11 +8,20 @@ import com.project.trading.marketdata.provider.MarketDataListener;
 import com.project.trading.marketdata.provider.MarketDataProvider;
 import com.project.trading.marketdata.service.InstrumentMappingService;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.WebSocket;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -24,11 +33,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Live market data provider integrating official DhanHQ WebSocket Market Feed v2.
  *
- * Safe Operational Mode:
- *   If credentials (MARKET_DATA_CLIENT_ID, MARKET_DATA_ACCESS_TOKEN) are absent,
- *   this provider safely remains in NOT_CONFIGURED state without faking connection.
+ * Operational & Security Architecture:
+ * - Uses standard Java 17 java.net.http.WebSocket client.
+ * - Authenticates against wss://api-feed.dhan.co via secure query handshake.
+ * - Dispatches JSON subscription requests (RequestCode 15/16).
+ * - Ingests and normalizes live binary packets (Codes 2, 4, 8) into MarketQuote and MarketDepth.
+ * - Enforces exponential backoff reconnects and staleness monitoring.
+ * - Never fakes live data or masks connection state when credentials are absent or invalid.
  */
 public class DhanLiveMarketDataProvider implements MarketDataProvider {
+
+    public static final String DHAN_FEED_URL = "wss://api-feed.dhan.co";
 
     private final String clientId;
     private final String accessToken;
@@ -46,7 +61,11 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
     private final Set<Long> subscribedStockIds = ConcurrentHashMap.newKeySet();
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private HttpClient httpClient;
+    private volatile WebSocket webSocket;
+
     private ScheduledExecutorService healthScheduler;
+    private ScheduledExecutorService reconnectScheduler;
     private int reconnectAttempts = 0;
 
     public DhanLiveMarketDataProvider() {
@@ -79,19 +98,82 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         }
 
         if (running.compareAndSet(false, true)) {
-            setStatus(MarketDataStatus.CONNECTING, "Connecting to DhanHQ WebSocket Feed v2...");
-            startHealthMonitor();
-            // In a production deployment with valid keys, the WebSocket client would connect here.
-            // If server rejects or cannot reach, update status to ERROR/RECONNECTING with exponential backoff.
+            startSchedulers();
+            initiateWebSocketConnection();
+        }
+    }
+
+    private synchronized void initiateWebSocketConnection() {
+        if (!running.get()) return;
+
+        setStatus(MarketDataStatus.CONNECTING, "Connecting to DhanHQ WebSocket Feed v2 at " + DHAN_FEED_URL + "...");
+        try {
+            String url = String.format("%s?version=2&token=%s&clientId=%s&authType=2",
+                    DHAN_FEED_URL,
+                    URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
+                    URLEncoder.encode(clientId, StandardCharsets.UTF_8));
+
+            if (httpClient == null) {
+                httpClient = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(10))
+                        .build();
+            }
+
+            httpClient.newWebSocketBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .buildAsync(URI.create(url), new DhanWebSocketListener())
+                    .whenComplete((ws, throwable) -> {
+                        if (throwable != null) {
+                            handleConnectionFailure("WebSocket connection error: " + throwable.getMessage(), throwable);
+                        } else {
+                            this.webSocket = ws;
+                            handleConnectionSuccess();
+                        }
+                    });
+
+        } catch (Throwable t) {
+            handleConnectionFailure("Failed to initiate WebSocket connection: " + t.getMessage(), t);
+        }
+    }
+
+    private void handleConnectionSuccess() {
+        resetBackoff();
+        setStatus(MarketDataStatus.CONNECTED, "Connected to DhanHQ WebSocket Feed v2");
+        System.out.println("[DhanLiveMarketDataProvider] Successfully connected to live market feed.");
+
+        // Restore active subscriptions on reconnect
+        if (!subscribedStockIds.isEmpty()) {
+            sendSubscriptionMessage(new ArrayList<>(subscribedStockIds), 15);
+        }
+    }
+
+    private void handleConnectionFailure(String reason, Throwable t) {
+        System.err.println("[DhanLiveMarketDataProvider] " + reason);
+        if (t != null && t.getCause() != null) {
+            System.err.println("[DhanLiveMarketDataProvider] Cause: " + t.getCause().getMessage());
+        }
+
+        if (!running.get()) return;
+
+        int delay = calculateBackoffDelaySeconds();
+        setStatus(MarketDataStatus.RECONNECTING, reason + ". Reconnecting in " + delay + "s (attempt #" + reconnectAttempts + ")...");
+
+        if (reconnectScheduler != null && !reconnectScheduler.isShutdown()) {
+            reconnectScheduler.schedule(this::initiateWebSocketConnection, delay, TimeUnit.SECONDS);
         }
     }
 
     @Override
     public synchronized void disconnect() {
         if (running.compareAndSet(true, false)) {
-            if (healthScheduler != null) {
-                healthScheduler.shutdownNow();
-                healthScheduler = null;
+            stopSchedulers();
+            if (webSocket != null) {
+                try {
+                    webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Normal disconnect").join();
+                } catch (Throwable ignored) {
+                    webSocket.abort();
+                }
+                webSocket = null;
             }
             setStatus(MarketDataStatus.DISCONNECTED, "DhanHQ live feed disconnected");
         }
@@ -99,15 +181,61 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
 
     @Override
     public void subscribe(List<Long> stockIds) {
-        if (stockIds != null) {
+        if (stockIds != null && !stockIds.isEmpty()) {
             subscribedStockIds.addAll(stockIds);
+            if (webSocket != null && status == MarketDataStatus.CONNECTED) {
+                sendSubscriptionMessage(stockIds, 15);
+            }
         }
     }
 
     @Override
     public void unsubscribe(List<Long> stockIds) {
-        if (stockIds != null) {
+        if (stockIds != null && !stockIds.isEmpty()) {
             subscribedStockIds.removeAll(stockIds);
+            if (webSocket != null && status == MarketDataStatus.CONNECTED) {
+                sendSubscriptionMessage(stockIds, 16);
+            }
+        }
+    }
+
+    /**
+     * Sends official DhanHQ v2 JSON subscription payload over active WebSocket.
+     * RequestCode 15: Subscribe
+     * RequestCode 16: Unsubscribe
+     */
+    public boolean sendSubscriptionMessage(List<Long> stockIds, int requestCode) {
+        if (stockIds == null || stockIds.isEmpty() || webSocket == null) {
+            return false;
+        }
+
+        List<InstrumentMappingService.InstrumentMapping> instruments = new ArrayList<>();
+        for (long id : stockIds) {
+            mappingService.getByStockId(id).ifPresent(instruments::add);
+        }
+
+        if (instruments.isEmpty()) {
+            return false;
+        }
+
+        StringBuilder json = new StringBuilder();
+        json.append("{\"RequestCode\":").append(requestCode)
+            .append(",\"InstrumentCount\":").append(instruments.size())
+            .append(",\"InstrumentList\":[");
+
+        for (int i = 0; i < instruments.size(); i++) {
+            var inst = instruments.get(i);
+            if (i > 0) json.append(",");
+            json.append("{\"ExchangeSegment\":\"").append(inst.segment()).append("\",\"SecurityId\":\"").append(inst.providerSecurityId()).append("\"}");
+        }
+        json.append("]}");
+
+        try {
+            webSocket.sendText(json.toString(), true);
+            return true;
+        } catch (Throwable t) {
+            System.err.println("[DhanLiveMarketDataProvider] Failed to send subscription payload: " + t.getMessage());
+            return false;
         }
     }
 
@@ -144,7 +272,6 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
     public boolean isStale(long stockId) {
         MarketQuote quote = latestQuotes.get(stockId);
         if (quote == null) return true;
-        // Stale if last quote was received more than 15 seconds ago
         return Instant.now().minusSeconds(15).isAfter(quote.receivedTimestamp());
     }
 
@@ -205,7 +332,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         }
     }
 
-    private void startHealthMonitor() {
+    private void startSchedulers() {
         healthScheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -215,12 +342,31 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
             }
         });
         healthScheduler.scheduleWithFixedDelay(this::checkHealth, 5, 5, TimeUnit.SECONDS);
+
+        reconnectScheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "DhanReconnect-Daemon");
+                t.setDaemon(true);
+                return t;
+            }
+        });
+    }
+
+    private void stopSchedulers() {
+        if (healthScheduler != null) {
+            healthScheduler.shutdownNow();
+            healthScheduler = null;
+        }
+        if (reconnectScheduler != null) {
+            reconnectScheduler.shutdownNow();
+            reconnectScheduler = null;
+        }
     }
 
     private void checkHealth() {
         if (!running.get()) return;
 
-        // Verify if active quotes are becoming stale
         Instant threshold = Instant.now().minusSeconds(15);
         boolean anyStale = false;
         for (long stockId : subscribedStockIds) {
@@ -258,5 +404,58 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
 
     public Set<Long> getSubscribedStockIds() {
         return Collections.unmodifiableSet(subscribedStockIds);
+    }
+
+    public WebSocket getWebSocket() {
+        return webSocket;
+    }
+
+    // Package-private hook for testing
+    void setWebSocketForTest(WebSocket ws) {
+        this.webSocket = ws;
+    }
+
+    /**
+     * WebSocket listener handling lifecycle events and binary market frames.
+     */
+    private class DhanWebSocketListener implements WebSocket.Listener {
+
+        @Override
+        public void onOpen(WebSocket ws) {
+            ws.request(1);
+        }
+
+        @Override
+        public CompletionStage<?> onBinary(WebSocket ws, ByteBuffer data, boolean last) {
+            try {
+                byte[] bytes = new byte[data.remaining()];
+                data.get(bytes);
+                ingestBinaryPacket(bytes);
+            } catch (Throwable t) {
+                System.err.println("[DhanWebSocketListener] Binary ingest error: " + t.getMessage());
+            } finally {
+                ws.request(1);
+            }
+            return null;
+        }
+
+        @Override
+        public CompletionStage<?> onText(WebSocket ws, CharSequence data, boolean last) {
+            ws.request(1);
+            return null;
+        }
+
+        @Override
+        public void onError(WebSocket ws, Throwable error) {
+            handleConnectionFailure("WebSocket stream error: " + error.getMessage(), error);
+        }
+
+        @Override
+        public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
+            if (running.get()) {
+                handleConnectionFailure("WebSocket closed by server (status " + statusCode + ": " + reason + ")", null);
+            }
+            return null;
+        }
     }
 }
