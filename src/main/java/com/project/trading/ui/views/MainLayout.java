@@ -1,8 +1,12 @@
 package com.project.trading.ui.views;
 
+import com.project.trading.marketdata.model.MarketDataSource;
+import com.project.trading.marketdata.model.MarketDataStatus;
+import com.project.trading.marketdata.service.MarketDataConnectionManager;
 import com.project.trading.model.AuthUser;
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -26,30 +30,105 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private static final String SVG_MARKET = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941\" /></svg>";
     private static final String SVG_PORTFOLIO = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3\" /></svg>";
     private static final String SVG_HISTORY = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z\" /></svg>";
+    private static final String SVG_ORDERS = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z\" /></svg>";
     private static final String SVG_LOGOUT = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9\" /></svg>";
     private static final String SVG_PROFILE = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z\" /></svg>";
+    private static final String SVG_CLOSE = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M6 18L18 6M6 6l12 12\" /></svg>";
 
     public MainLayout() {
-        setPrimarySection(Section.DRAWER);
+        setPrimarySection(Section.NAVBAR);
+        setDrawerOpened(false);
         createNavbar();
         createDrawer();
+        setupResponsiveEngine();
+    }
+
+    private void setupResponsiveEngine() {
+        getElement().executeJs(
+            "const al = this;" +
+            "const syncMode = () => {" +
+            "  const isMobile = window.innerWidth <= 1024;" +
+            "  if (isMobile) {" +
+            "    al.setAttribute('overlay', '');" +
+            "    al.overlay = true;" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'true');" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '0px');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(true);" +
+            "    if (al.__wasDesktop || al.__wasDesktop === undefined) {" +
+            "      al.drawerOpened = false;" +
+            "    }" +
+            "    al.__wasDesktop = false;" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  } else {" +
+            "    const wasMobile = (al.__wasDesktop === false);" +
+            "    const isInitial = (al.__wasDesktop === undefined);" +
+            "    al.__wasDesktop = true;" +
+            "    al.removeAttribute('overlay');" +
+            "    al.overlay = false;" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'false');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(false);" +
+            "    if (isInitial || wasMobile) {" +
+            "      al.drawerOpened = true;" +
+            "    }" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  }" +
+            "};" +
+            "window.addEventListener('resize', syncMode);" +
+            "window.addEventListener('close-overlay-drawer', () => { al.drawerOpened = false; });" +
+            "document.addEventListener('click', (e) => {" +
+            "  if (al.drawerOpened && window.innerWidth <= 1024) {" +
+            "    const drawer = al.querySelector('[slot=\"drawer\"]');" +
+            "    const toggle = al.querySelector('vaadin-drawer-toggle');" +
+            "    if (drawer && !drawer.contains(e.target) && (!toggle || !toggle.contains(e.target))) {" +
+            "      al.drawerOpened = false;" +
+            "    }" +
+            "  }" +
+            "});" +
+            "requestAnimationFrame(syncMode);" +
+            "setTimeout(syncMode, 50);" +
+            "setTimeout(syncMode, 200);"
+        );
     }
 
     private void createNavbar() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.setAriaLabel("Toggle navigation");
+        toggle.getElement().setAttribute("title", "Toggle navigation");
+        toggle.addClassName("st-drawer-toggle");
         toggle.getStyle().set("color", "var(--st-text-secondary)");
+
+        // Mobile brand badge (visible on tablet / mobile)
+        Div mobileBrand = new Div();
+        mobileBrand.addClassName("st-navbar-mobile-brand");
+        Component mobileBrandIcon = createSvgIcon(SVG_BRAND);
+        Span mobileBrandText = new Span("SimTrade");
+        mobileBrandText.addClassName("st-brand-text");
+        Span mobileTag = new Span("PAPER");
+        mobileTag.addClassName("st-brand-tag");
+        mobileBrandText.add(mobileTag);
+        mobileBrand.add(mobileBrandIcon, mobileBrandText);
 
         Div statusBadge = new Div();
         statusBadge.addClassName("st-navbar-status");
         Span pulse = new Span();
         pulse.addClassName("st-pulse-dot");
-        Span statusText = new Span("SIMULATION LIVE");
+
+        MarketDataConnectionManager mgr = MarketDataConnectionManager.getInstance();
+        String badgeText;
+        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER) {
+            badgeText = "LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED");
+        } else if (mgr.getStatus() == MarketDataStatus.NOT_CONFIGURED) {
+            badgeText = "FEED NOT CONFIGURED";
+        } else {
+            badgeText = "SIMULATION LIVE";
+        }
+
+        Span statusText = new Span(badgeText);
         statusText.getStyle().set("font-size", "11px").set("font-weight", "600").set("letter-spacing", "0.06em");
         statusBadge.add(pulse, statusText);
 
-        Div navbarLeft = new Div(toggle, statusBadge);
-        navbarLeft.getStyle().set("display", "flex").set("align-items", "center").set("gap", "12px");
+        Div navbarLeft = new Div(toggle, mobileBrand, statusBadge);
+        navbarLeft.addClassName("st-navbar-left");
 
         Div navbarContent = new Div(navbarLeft);
         navbarContent.addClassName("st-navbar");
@@ -73,7 +152,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             usernameSpan.addClassName("st-navbar-username");
 
             Div userProfile = new Div(avatar, usernameSpan);
-            userProfile.getStyle().set("display", "flex").set("align-items", "center").set("gap", "8px");
+            userProfile.addClassName("st-user-profile");
 
             Button logout = new Button("Exit", e -> securityService.logout());
             logout.setIcon(createSvgIcon(SVG_LOGOUT));
@@ -88,9 +167,15 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     private void createDrawer() {
-        // Brand section
+        Div drawerWrapper = new Div();
+        drawerWrapper.addClassName("st-drawer-wrapper");
+
+        // Brand section (with mobile close button)
         Div brand = new Div();
         brand.addClassName("st-drawer-brand");
+
+        Div brandLeft = new Div();
+        brandLeft.addClassName("st-drawer-brand-left");
 
         Component brandIcon = createSvgIcon(SVG_BRAND);
         Span brandText = new Span("SimTrade");
@@ -100,7 +185,22 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         tag.addClassName("st-brand-tag");
         brandText.add(tag);
 
-        brand.add(brandIcon, brandText);
+        brandLeft.add(brandIcon, brandText);
+
+        Button closeBtn = new Button();
+        closeBtn.addClassName("st-drawer-close-btn");
+        closeBtn.setIcon(createSvgIcon(SVG_CLOSE));
+        closeBtn.setAriaLabel("Collapse sidebar");
+        closeBtn.getElement().setAttribute("title", "Collapse sidebar");
+        closeBtn.getElement().removeAttribute("theme");
+        closeBtn.addClickListener(e -> setDrawerOpened(false));
+        closeBtn.getElement().executeJs("this.addEventListener('click', (e) => { e.stopPropagation(); const al = this.closest('vaadin-app-layout'); if (al) al.drawerOpened = false; });");
+
+        brand.add(brandLeft, closeBtn);
+
+        // Nav Section
+        Div navSection = new Div();
+        navSection.addClassName("st-drawer-nav-section");
 
         // Section title
         Div navHeader = new Div();
@@ -109,24 +209,28 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         // Navigation links
         Nav nav = new Nav();
+        nav.addClassName("st-nav-menu");
 
         RouterLink dashboardLink = createNavLink("Overview", SVG_DASHBOARD, DashboardView.class);
         RouterLink marketLink = createNavLink("Market Quotes", SVG_MARKET, MarketView.class);
+        RouterLink ordersLink = createNavLink("Orders", SVG_ORDERS, OrdersView.class);
         RouterLink portfolioLink = createNavLink("Holdings & P&L", SVG_PORTFOLIO, PortfolioView.class);
         RouterLink historyLink = createNavLink("Trade Log", SVG_HISTORY, HistoryView.class);
         RouterLink profileLink = createNavLink("Settings", SVG_PROFILE, ProfileView.class);
 
-        nav.add(dashboardLink, marketLink, portfolioLink, historyLink, profileLink);
+        nav.add(dashboardLink, marketLink, ordersLink, portfolioLink, historyLink, profileLink);
+        navSection.add(navHeader, nav);
 
         // Drawer footer
         Div footer = new Div();
         footer.addClassName("st-drawer-footer");
-        Span vSpan = new Span("SimTrade Terminal v2.0");
+        Span vSpan = new Span("SimTrade Terminal v3.0");
         vSpan.getStyle().set("font-weight", "600");
-        Span subSpan = new Span("Institutional Paper Engine");
+        Span subSpan = new Span("Live Market & Paper Engine");
         footer.add(vSpan, subSpan);
 
-        addToDrawer(brand, navHeader, nav, footer);
+        drawerWrapper.add(brand, navSection, footer);
+        addToDrawer(drawerWrapper);
     }
 
     private RouterLink createNavLink(String text, String svgData, Class<? extends Component> target) {
@@ -139,6 +243,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         link.add(svgIcon, label);
         navLinks.add(link);
+
+        // Immediately close overlay drawer on client-side click
+        link.getElement().executeJs("this.addEventListener('click', () => window.dispatchEvent(new CustomEvent('close-overlay-drawer')));");
+
         return link;
     }
 
@@ -151,13 +259,25 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
+        if (isOverlay()) {
+            setDrawerOpened(false);
+        }
+        UI.getCurrent().getPage().executeJs(
+            "if (window.innerWidth <= 1024) {" +
+            "  const al = document.querySelector('vaadin-app-layout');" +
+            "  if (al) al.drawerOpened = false;" +
+            "  window.dispatchEvent(new CustomEvent('close-overlay-drawer'));" +
+            "}"
+        );
+
         String currentPath = event.getLocation().getPath();
         for (RouterLink link : navLinks) {
             String href = link.getHref();
             boolean isActive = currentPath.equals(href)
                     || (href.isEmpty() && (currentPath.isEmpty() || currentPath.equals("market") || currentPath.equals("ui")))
                     || (href.equals("ui/market") && (currentPath.equals("ui/market") || currentPath.equals("ui") || currentPath.isEmpty()))
-                    || (href.equals("ui/dashboard") && currentPath.equals("ui/dashboard"));
+                    || (href.equals("ui/dashboard") && currentPath.equals("ui/dashboard"))
+                    || (href.equals("ui/orders") && currentPath.equals("ui/orders"));
 
             if (isActive) {
                 link.addClassName("active");

@@ -113,6 +113,26 @@ public class AdminTradeMonitorView extends VerticalLayout {
         grid.setAllRowsVisible(true);
     }
 
+    private com.vaadin.flow.shared.Registration tradeRegistration;
+
+    @Override
+    protected void onAttach(com.vaadin.flow.component.AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        loadData();
+        tradeRegistration = com.project.trading.broadcaster.MarketDataBroadcaster.registerTradeListener(attachEvent.getUI(), trade -> {
+            loadData();
+        });
+    }
+
+    @Override
+    protected void onDetach(com.vaadin.flow.component.DetachEvent detachEvent) {
+        if (tradeRegistration != null) {
+            tradeRegistration.remove();
+            tradeRegistration = null;
+        }
+        super.onDetach(detachEvent);
+    }
+
     private void loadData() {
         List<Trade> recentTrades = adminService.getRecentTrades(200);
         grid.setItems(recentTrades);

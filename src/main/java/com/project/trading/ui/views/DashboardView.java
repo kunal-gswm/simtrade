@@ -2,9 +2,12 @@ package com.project.trading.ui.views;
 
 import com.project.trading.broadcaster.MarketDataBroadcaster;
 import com.project.trading.model.AuthUser;
+import com.project.trading.model.Stock;
 import com.project.trading.model.Trade;
 import com.project.trading.service.PortfolioService;
+import com.project.trading.service.StockService;
 import com.project.trading.service.TradingService;
+import com.project.trading.ui.components.TradingChartView;
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
@@ -39,6 +42,8 @@ public class DashboardView extends VerticalLayout {
     private final SecurityService securityService = new SecurityService();
     private final PortfolioService portfolioService = new PortfolioService();
     private final TradingService tradingService = new TradingService();
+    private final StockService stockService = new StockService();
+    private final TradingChartView marketPulseChart = new TradingChartView();
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
     private final NumberFormat percentFormat = NumberFormat.getPercentInstance(new Locale("en", "IN"));
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm");
@@ -75,17 +80,24 @@ public class DashboardView extends VerticalLayout {
             return;
         }
 
+        marketPulseChart.setCompact(true);
+        marketPulseChart.setHeight(250);
+
         add(createHeader(currentUser));
         add(createMetricsGrid());
+        add(marketPulseChart);
         add(createAllocationSection());
 
         HorizontalLayout splitSection = new HorizontalLayout();
         splitSection.setWidthFull();
         splitSection.setSpacing(true);
-        splitSection.getStyle().set("margin-top", "12px").set("flex-wrap", "wrap");
+        splitSection.addClassName("st-split-section");
+        splitSection.getStyle().set("margin-top", "12px");
 
         Component recentTradesSection = createRecentTradesSection();
         Component portfolioSnapshot = createPortfolioSnapshot();
+        recentTradesSection.getStyle().set("min-width", "0");
+        portfolioSnapshot.getStyle().set("min-width", "0");
 
         splitSection.add(recentTradesSection, portfolioSnapshot);
         splitSection.setFlexGrow(3, recentTradesSection);
@@ -102,24 +114,27 @@ public class DashboardView extends VerticalLayout {
         // Refresh immediately on attach
         refreshDashboardData();
 
-        // Register to centralized market broadcaster for real-time price & trade events
-        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+        // Register to centralized market broadcaster for real-time push events
+        broadcastRegistration = MarketDataBroadcaster.register(ui, new MarketDataBroadcaster.BroadcastListener() {
             @Override
             public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
-                ui.access(() -> refreshDashboardData());
+                refreshDashboardData();
             }
 
             @Override
             public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
                 if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
-                    ui.access(() -> refreshDashboardData());
+                    refreshDashboardData();
+                }
+            }
+
+            @Override
+            public void onCandleUpdate(MarketDataBroadcaster.CandleUpdate event) {
+                if (event.candle() != null) {
+                    marketPulseChart.onCandleUpdate(event.candle());
                 }
             }
         });
-
-        // Set controlled 3-second fallback polling interval
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> refreshDashboardData());
     }
 
     @Override
@@ -128,7 +143,6 @@ public class DashboardView extends VerticalLayout {
             broadcastRegistration.remove();
             broadcastRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1); // Disable polling on leave
         super.onDetach(detachEvent);
     }
 
@@ -144,7 +158,11 @@ public class DashboardView extends VerticalLayout {
             netWorthSubtext.setText(pnlSign + percentFormat.format(summary.totalReturnPct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)) + " return");
 
             // 2. Available Cash
-            cashValue.setText(currencyFormat.format(summary.cash));
+            if (summary.reservedCash.compareTo(BigDecimal.ZERO) > 0) {
+                cashValue.setText(currencyFormat.format(summary.availableCash));
+            } else {
+                cashValue.setText(currencyFormat.format(summary.cash));
+            }
 
             // 3. Current Holdings Value
             holdingsValue.setText(currencyFormat.format(summary.totalCurrentValue));
@@ -173,6 +191,16 @@ public class DashboardView extends VerticalLayout {
 
             // Update Active Positions
             updateActivePositions(summary);
+
+            // Ensure compact market pulse chart has stock assigned
+            if (marketPulseChart.getStock() == null) {
+                try {
+                    List<Stock> active = stockService.listActive();
+                    if (!active.isEmpty()) {
+                        marketPulseChart.setStock(active.get(0));
+                    }
+                } catch (Exception ignored) {}
+            }
 
         } catch (Exception e) {
             // Keep existing displayed state if a transient query error occurs
@@ -203,12 +231,13 @@ public class DashboardView extends VerticalLayout {
         H1 title = new H1("Overview · " + formattedUsername);
         title.addClassName("st-page-title");
 
-        Paragraph subtitle = new Paragraph("Live paper trading capital, position valuations and order telemetry.");
+        Paragraph subtitle = new Paragraph("Institutional Paper Engine · Real-time portfolio valuation, simulated Indian equities, and execution telemetry.");
         subtitle.addClassName("st-page-subtitle");
 
         titleGroup.add(title, subtitle);
 
         HorizontalLayout actions = new HorizontalLayout();
+        actions.addClassName("st-header-actions");
         actions.setSpacing(true);
 
         RouterLink marketLink = new RouterLink();
@@ -225,7 +254,14 @@ public class DashboardView extends VerticalLayout {
         portBtn.getElement().removeAttribute("theme");
         portLink.add(portBtn);
 
-        actions.add(marketLink, portLink);
+        RouterLink ordersLink = new RouterLink();
+        ordersLink.setRoute(OrdersView.class);
+        Button ordersBtn = new Button("Orders");
+        ordersBtn.addClassNames("st-btn", "st-btn-secondary");
+        ordersBtn.getElement().removeAttribute("theme");
+        ordersLink.add(ordersBtn);
+
+        actions.add(marketLink, ordersLink, portLink);
         headerContainer.add(titleGroup, actions);
 
         return headerContainer;
@@ -384,7 +420,11 @@ public class DashboardView extends VerticalLayout {
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "8px");
+            tableContainer.getStyle()
+                    .set("margin-top", "8px")
+                    .set("overflow-x", "auto")
+                    .set("-webkit-overflow-scrolling", "touch")
+                    .set("max-width", "100%");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
@@ -394,6 +434,7 @@ public class DashboardView extends VerticalLayout {
                     .set("font-size", "10px")
                     .set("text-transform", "uppercase")
                     .set("letter-spacing", "0.06em")
+                    .set("min-width", "460px")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
@@ -411,6 +452,7 @@ public class DashboardView extends VerticalLayout {
                 row.setWidthFull();
                 row.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
+                        .set("min-width", "460px")
                         .set("font-size", "12px");
                 row.setAlignItems(FlexComponent.Alignment.CENTER);
 
@@ -484,7 +526,11 @@ public class DashboardView extends VerticalLayout {
         } else {
             Div tableContainer = new Div();
             tableContainer.setWidthFull();
-            tableContainer.getStyle().set("margin-top", "8px");
+            tableContainer.getStyle()
+                    .set("margin-top", "8px")
+                    .set("overflow-x", "auto")
+                    .set("-webkit-overflow-scrolling", "touch")
+                    .set("max-width", "100%");
 
             HorizontalLayout tableHeader = new HorizontalLayout();
             tableHeader.setWidthFull();
@@ -494,6 +540,7 @@ public class DashboardView extends VerticalLayout {
                     .set("font-size", "10px")
                     .set("text-transform", "uppercase")
                     .set("letter-spacing", "0.06em")
+                    .set("min-width", "460px")
                     .set("color", "var(--st-text-secondary)");
 
             tableHeader.add(
@@ -511,6 +558,7 @@ public class DashboardView extends VerticalLayout {
                 posRow.setWidthFull();
                 posRow.getStyle().set("padding", "8px 0")
                         .set("border-bottom", "1px solid var(--st-border-subtle)")
+                        .set("min-width", "460px")
                         .set("font-size", "12px");
                 posRow.setAlignItems(FlexComponent.Alignment.CENTER);
 

@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
-@WebFilter(filterName = "AuthFilter", urlPatterns = {"/app/*", "/admin/*", "/dashboard", "/trade"})
+@WebFilter(filterName = "AuthFilter", urlPatterns = {"/app/*", "/admin/*", "/legacy/admin/*", "/dashboard", "/trade"})
 public class AuthFilter implements Filter {
 
     @Override
@@ -39,7 +39,7 @@ public class AuthFilter implements Filter {
         }
 
         // 2. Admin realm protection
-        if (servletPath != null && servletPath.startsWith("/admin")) {
+        if (servletPath != null && (servletPath.startsWith("/admin") || servletPath.startsWith("/legacy/admin"))) {
             if (authUser.getRole() != Role.ADMIN) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied: Administrator privileges required.");
                 return;

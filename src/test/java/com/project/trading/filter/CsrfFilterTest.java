@@ -95,6 +95,43 @@ public class CsrfFilterTest {
         assertEquals(200, status.get());
     }
 
+    @Test
+    public void testVaadinFlowRequest_BypassesFilterEvenOnPost() throws Exception {
+        Map<String, Object> sessionAttrs = new HashMap<>();
+        Map<String, Object> requestAttrs = new HashMap<>();
+        AtomicBoolean chainCalled = new AtomicBoolean(false);
+        AtomicInteger status = new AtomicInteger(200);
+
+        HttpSession session = (HttpSession) Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class<?>[]{HttpSession.class},
+                (proxy, m, args) -> null
+        );
+
+        HttpServletRequest req = (HttpServletRequest) Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, m, args) -> {
+                    String name = m.getName();
+                    if ("getMethod".equals(name)) return "POST";
+                    if ("getSession".equals(name)) return session;
+                    if ("getParameter".equals(name)) {
+                        if ("v-r".equals(args[0])) return "uidl";
+                        return null;
+                    }
+                    return null;
+                }
+        );
+
+        HttpServletResponse resp = mockResponse(status);
+        FilterChain chain = (r, s) -> chainCalled.set(true);
+
+        csrfFilter.doFilter(req, resp, chain);
+
+        assertTrue(chainCalled.get(), "Chain must be called for Vaadin Flow RPC without custom token");
+        assertEquals(200, status.get());
+    }
+
     private HttpServletRequest mockRequest(String method, String paramToken, String headerToken,
                                            Map<String, Object> sessionAttrs, Map<String, Object> requestAttrs) {
         HttpSession session = (HttpSession) Proxy.newProxyInstance(

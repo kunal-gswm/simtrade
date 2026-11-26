@@ -2,6 +2,7 @@ package com.project.trading.ui.admin;
 
 import com.project.trading.ui.security.SecurityService;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -29,19 +30,81 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
     private static final String SVG_TOOLS = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z\" /></svg>";
     private static final String SVG_EXIT = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3\" /></svg>";
     private static final String SVG_LOGOUT = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9\" /></svg>";
+    private static final String SVG_CLOSE = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M6 18L18 6M6 6l12 12\" /></svg>";
 
     public AdminLayout() {
-        setPrimarySection(Section.DRAWER);
+        setPrimarySection(Section.NAVBAR);
+        setDrawerOpened(false);
         createNavbar();
         createDrawer();
+        setupResponsiveEngine();
+    }
+
+    private void setupResponsiveEngine() {
+        getElement().executeJs(
+            "const al = this;" +
+            "const syncMode = () => {" +
+            "  const isMobile = window.innerWidth <= 1024;" +
+            "  if (isMobile) {" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'true');" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-offset-size', '0px');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(true);" +
+            "    else al.setAttribute('overlay', '');" +
+            "    if (al.__wasDesktop || al.__wasDesktop === undefined) {" +
+            "      al.drawerOpened = false;" +
+            "    }" +
+            "    al.__wasDesktop = false;" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  } else {" +
+            "    const wasMobile = (al.__wasDesktop === false);" +
+            "    const isInitial = (al.__wasDesktop === undefined);" +
+            "    al.__wasDesktop = true;" +
+            "    al.style.setProperty('--vaadin-app-layout-drawer-overlay', 'false');" +
+            "    if (typeof al._setOverlay === 'function') al._setOverlay(false);" +
+            "    else al.removeAttribute('overlay');" +
+            "    if (isInitial || wasMobile) {" +
+            "      al.drawerOpened = true;" +
+            "    }" +
+            "    if (typeof al._updateOffsetSize === 'function') al._updateOffsetSize();" +
+            "  }" +
+            "};" +
+            "window.addEventListener('resize', syncMode);" +
+            "window.addEventListener('close-overlay-drawer', () => { al.drawerOpened = false; });" +
+            "requestAnimationFrame(syncMode);" +
+            "setTimeout(syncMode, 50);" +
+            "setTimeout(syncMode, 200);"
+        );
     }
 
     private void createNavbar() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.setAriaLabel("Toggle navigation");
+        toggle.getElement().setAttribute("title", "Toggle navigation");
+        toggle.addClassName("st-drawer-toggle");
         toggle.getStyle().set("color", "var(--st-text-secondary)");
 
+        // Mobile brand badge
+        Div mobileBrand = new Div();
+        mobileBrand.addClassName("st-navbar-mobile-brand");
+        Component mobileBrandIcon = createSvgIcon(SVG_BRAND);
+        Span mobileBrandText = new Span("SimTrade");
+        mobileBrandText.addClassName("st-brand-text");
+        Span mobileTag = new Span("ADMIN");
+        mobileTag.getStyle()
+                .set("font-size", "9px")
+                .set("font-weight", "700")
+                .set("letter-spacing", "0.08em")
+                .set("text-transform", "uppercase")
+                .set("color", "var(--st-amber)")
+                .set("background", "var(--st-amber-bg)")
+                .set("border", "1px solid rgba(217, 119, 6, 0.3)")
+                .set("padding", "1px 5px")
+                .set("border-radius", "2px");
+        mobileBrandText.add(mobileTag);
+        mobileBrand.add(mobileBrandIcon, mobileBrandText);
+
         Span titleBadge = new Span("ADMIN CONSOLE");
+        titleBadge.addClassName("st-navbar-status");
         titleBadge.getStyle()
                 .set("font-size", "11px")
                 .set("font-weight", "700")
@@ -52,8 +115,8 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
                 .set("padding", "3px 8px")
                 .set("border-radius", "3px");
 
-        Div navbarLeft = new Div(toggle, titleBadge);
-        navbarLeft.getStyle().set("display", "flex").set("align-items", "center").set("gap", "12px");
+        Div navbarLeft = new Div(toggle, mobileBrand, titleBadge);
+        navbarLeft.addClassName("st-navbar-left");
 
         Div navbarContent = new Div(navbarLeft);
         navbarContent.addClassName("st-navbar");
@@ -73,9 +136,15 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     private void createDrawer() {
-        // Brand section
+        Div drawerWrapper = new Div();
+        drawerWrapper.addClassName("st-drawer-wrapper");
+
+        // Brand section (with mobile close button)
         Div brand = new Div();
         brand.addClassName("st-drawer-brand");
+
+        Div brandLeft = new Div();
+        brandLeft.addClassName("st-drawer-brand-left");
 
         Component brandIcon = createSvgIcon(SVG_BRAND);
         Span brandText = new Span("SimTrade");
@@ -94,13 +163,29 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
                 .set("border-radius", "2px");
         brandText.add(tag);
 
-        brand.add(brandIcon, brandText);
+        brandLeft.add(brandIcon, brandText);
+
+        Button closeBtn = new Button();
+        closeBtn.addClassName("st-drawer-close-btn");
+        closeBtn.setIcon(createSvgIcon(SVG_CLOSE));
+        closeBtn.setAriaLabel("Collapse sidebar");
+        closeBtn.getElement().setAttribute("title", "Collapse sidebar");
+        closeBtn.getElement().removeAttribute("theme");
+        closeBtn.addClickListener(e -> setDrawerOpened(false));
+        closeBtn.getElement().executeJs("this.addEventListener('click', () => { const al = this.closest('vaadin-app-layout'); if (al) al.drawerOpened = false; });");
+
+        brand.add(brandLeft, closeBtn);
+
+        // Nav Section
+        Div navSection = new Div();
+        navSection.addClassName("st-drawer-nav-section");
 
         Div navHeader = new Div();
         navHeader.setText("Administration");
         navHeader.addClassName("st-nav-section-title");
 
         Nav nav = new Nav();
+        nav.addClassName("st-nav-menu");
 
         RouterLink dashboardLink = createNavLink("Platform Overview", SVG_DASHBOARD, AdminDashboardView.class);
         RouterLink usersLink = createNavLink("User Management", SVG_USERS, AdminUsersView.class);
@@ -113,7 +198,9 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
         appLink.getStyle().set("margin-top", "16px").set("border-top", "1px solid var(--st-border-subtle)");
 
         nav.add(dashboardLink, usersLink, stocksLink, monitorLink, toolsLink, appLink);
+        navSection.add(navHeader, nav);
 
+        // Drawer footer
         Div footer = new Div();
         footer.addClassName("st-drawer-footer");
         Span vSpan = new Span("Admin Controller v2.0");
@@ -121,7 +208,8 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
         Span subSpan = new Span("Restricted Superuser Access");
         footer.add(vSpan, subSpan);
 
-        addToDrawer(brand, navHeader, nav, footer);
+        drawerWrapper.add(brand, navSection, footer);
+        addToDrawer(drawerWrapper);
     }
 
     private RouterLink createNavLink(String text, String svgData, Class<? extends Component> target) {
@@ -134,6 +222,10 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
 
         link.add(svgIcon, label);
         navLinks.add(link);
+
+        // Close overlay drawer immediately upon click
+        link.getElement().executeJs("this.addEventListener('click', () => window.dispatchEvent(new CustomEvent('close-overlay-drawer')));");
+
         return link;
     }
 
@@ -146,6 +238,17 @@ public class AdminLayout extends AppLayout implements AfterNavigationObserver {
 
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
+        if (isOverlay()) {
+            setDrawerOpened(false);
+        }
+        UI.getCurrent().getPage().executeJs(
+            "if (window.innerWidth <= 1024) {" +
+            "  const al = document.querySelector('vaadin-app-layout');" +
+            "  if (al) al.drawerOpened = false;" +
+            "  window.dispatchEvent(new CustomEvent('close-overlay-drawer'));" +
+            "}"
+        );
+
         String currentPath = event.getLocation().getPath();
         for (RouterLink link : navLinks) {
             String href = link.getHref();

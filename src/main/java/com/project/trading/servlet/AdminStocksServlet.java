@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
-@WebServlet("/admin/stocks")
+@WebServlet("/legacy/admin/stocks")
 public class AdminStocksServlet extends BaseServlet {
 
     private final StockService stockService = new StockService();
@@ -41,7 +41,7 @@ public class AdminStocksServlet extends BaseServlet {
         String action = req.getParameter("action");
         if (action == null) {
             flashError(req, "Missing action parameter.");
-            redirect(req, resp, "/admin/stocks");
+            redirect(req, resp, "/legacy/admin/stocks");
             return;
         }
 
@@ -100,6 +100,6 @@ public class AdminStocksServlet extends BaseServlet {
             flashError(req, "Operation failed: " + e.getMessage());
         }
 
-        redirect(req, resp, "/admin/stocks");
+        redirect(req, resp, "/legacy/admin/stocks");
     }
 }

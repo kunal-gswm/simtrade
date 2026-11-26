@@ -1,6 +1,8 @@
 package com.project.trading.broadcaster;
 
+import com.project.trading.model.Candle;
 import com.project.trading.model.Trade;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.shared.Registration;
 
 import java.math.BigDecimal;
@@ -11,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Thread-safe centralized event broadcaster connecting real-time market simulation
  * and order executions with connected Vaadin UI push sessions.
+ * Automatically prunes detached, closing, or failing listeners to prevent leaks.
  */
 public class MarketDataBroadcaster {
 
@@ -22,6 +25,8 @@ public class MarketDataBroadcaster {
 
     public record TradeUpdate(Trade trade, long timestamp) {}
 
+    public record CandleUpdate(Candle candle, long timestamp) {}
+
     @FunctionalInterface
     public interface Registration extends com.vaadin.flow.shared.Registration {
         @Override
@@ -31,6 +36,7 @@ public class MarketDataBroadcaster {
     public interface BroadcastListener {
         default void onPriceUpdate(PriceUpdate event) {}
         default void onTradeUpdate(TradeUpdate event) {}
+        default void onCandleUpdate(CandleUpdate event) {}
     }
 
     @FunctionalInterface
@@ -43,6 +49,11 @@ public class MarketDataBroadcaster {
         void onTradeUpdate(Trade trade);
     }
 
+    @FunctionalInterface
+    public interface CandleListener {
+        void onCandleUpdate(Candle candle);
+    }
+
     private static final CopyOnWriteArrayList<BroadcastListener> listeners = new CopyOnWriteArrayList<>();
 
     public static Registration register(BroadcastListener listener) {
@@ -51,6 +62,75 @@ public class MarketDataBroadcaster {
             return () -> listeners.remove(listener);
         }
         return () -> {};
+    }
+
+    public static Registration register(UI ui, BroadcastListener listener) {
+        if (listener == null) return () -> {};
+        if (ui == null) return register(listener);
+
+        BroadcastListener wrapper = new BroadcastListener() {
+            @Override
+            public void onPriceUpdate(PriceUpdate event) {
+                if (!ui.isAttached() || ui.isClosing()) {
+                    listeners.remove(this);
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (ui.isAttached() && !ui.isClosing()) {
+                            listener.onPriceUpdate(event);
+                        } else {
+                            listeners.remove(this);
+                        }
+                    });
+                } catch (Throwable t) {
+                    listeners.remove(this);
+                }
+            }
+
+            @Override
+            public void onTradeUpdate(TradeUpdate event) {
+                if (!ui.isAttached() || ui.isClosing()) {
+                    listeners.remove(this);
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (ui.isAttached() && !ui.isClosing()) {
+                            listener.onTradeUpdate(event);
+                        } else {
+                            listeners.remove(this);
+                        }
+                    });
+                } catch (Throwable t) {
+                    listeners.remove(this);
+                }
+            }
+
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                if (!ui.isAttached() || ui.isClosing()) {
+                    listeners.remove(this);
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (ui.isAttached() && !ui.isClosing()) {
+                            listener.onCandleUpdate(event);
+                        } else {
+                            listeners.remove(this);
+                        }
+                    });
+                } catch (Throwable t) {
+                    listeners.remove(this);
+                }
+            }
+        };
+
+        listeners.add(wrapper);
+        Registration reg = () -> listeners.remove(wrapper);
+        ui.addDetachListener(e -> reg.remove());
+        return reg;
     }
 
     public static Registration registerPriceListener(PriceListener listener) {
@@ -64,6 +144,16 @@ public class MarketDataBroadcaster {
         return register(bl);
     }
 
+    public static Registration registerPriceListener(UI ui, PriceListener listener) {
+        if (listener == null) return () -> {};
+        return register(ui, new BroadcastListener() {
+            @Override
+            public void onPriceUpdate(PriceUpdate event) {
+                listener.onPriceUpdate(event);
+            }
+        });
+    }
+
     public static Registration registerTradeListener(TradeListener listener) {
         if (listener == null) return () -> {};
         BroadcastListener bl = new BroadcastListener() {
@@ -75,6 +165,37 @@ public class MarketDataBroadcaster {
         return register(bl);
     }
 
+    public static Registration registerTradeListener(UI ui, TradeListener listener) {
+        if (listener == null) return () -> {};
+        return register(ui, new BroadcastListener() {
+            @Override
+            public void onTradeUpdate(TradeUpdate event) {
+                listener.onTradeUpdate(event.trade());
+            }
+        });
+    }
+
+    public static Registration registerCandleListener(CandleListener listener) {
+        if (listener == null) return () -> {};
+        BroadcastListener bl = new BroadcastListener() {
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                listener.onCandleUpdate(event.candle());
+            }
+        };
+        return register(bl);
+    }
+
+    public static Registration registerCandleListener(UI ui, CandleListener listener) {
+        if (listener == null) return () -> {};
+        return register(ui, new BroadcastListener() {
+            @Override
+            public void onCandleUpdate(CandleUpdate event) {
+                listener.onCandleUpdate(event.candle());
+            }
+        });
+    }
+
     public static void broadcastPrices(Map<Long, BigDecimal> newPrices) {
         if (newPrices == null || newPrices.isEmpty()) return;
         PriceUpdate event = new PriceUpdate(newPrices, System.currentTimeMillis());
@@ -82,7 +203,8 @@ public class MarketDataBroadcaster {
             try {
                 listener.onPriceUpdate(event);
             } catch (Throwable t) {
-                System.err.println("[MarketDataBroadcaster] Price listener exception: " + t.getMessage());
+                listeners.remove(listener);
+                System.err.println("[MarketDataBroadcaster] Removed failing price listener: " + t.getMessage());
             }
         }
     }
@@ -94,7 +216,21 @@ public class MarketDataBroadcaster {
             try {
                 listener.onTradeUpdate(event);
             } catch (Throwable t) {
-                System.err.println("[MarketDataBroadcaster] Trade listener exception: " + t.getMessage());
+                listeners.remove(listener);
+                System.err.println("[MarketDataBroadcaster] Removed failing trade listener: " + t.getMessage());
+            }
+        }
+    }
+
+    public static void broadcastCandle(Candle candle) {
+        if (candle == null) return;
+        CandleUpdate event = new CandleUpdate(candle, System.currentTimeMillis());
+        for (BroadcastListener listener : listeners) {
+            try {
+                listener.onCandleUpdate(event);
+            } catch (Throwable t) {
+                listeners.remove(listener);
+                System.err.println("[MarketDataBroadcaster] Removed failing candle listener: " + t.getMessage());
             }
         }
     }

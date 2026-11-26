@@ -9,6 +9,9 @@
 
 /* ===== Core Institutional Design Tokens ===== */
 :root {
+  /* Sidebar Geometry */
+  --st-sidebar-width: 260px;
+
   /* Surfaces & Canvas — Warm Graphite */
   --st-bg-main: #17151B;              /* Warm graphite base canvas */
   --st-bg-surface: #201D25;           /* Primary graphite panel surface */
@@ -136,9 +139,32 @@ vaadin-grid,
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== Global Resets & Layout Safety ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+vaadin-connection-indicator {
+  max-width: 100vw;
+  pointer-events: none;
+}
+.v-status-message {
+  max-width: calc(100vw - 24px) !important;
+  box-sizing: border-box !important;
+}
+
 /* ===== AppLayout Shell & Navigation ===== */
 vaadin-app-layout {
-  --vaadin-app-layout-drawer-offset-size: 250px;
+  --vaadin-app-layout-drawer-offset-size: var(--st-sidebar-width);
+  --vaadin-app-layout-drawer-width: var(--st-sidebar-width);
+  --_vaadin-app-layout-drawer-width: var(--st-sidebar-width);
   background-color: var(--st-bg-main);
 }
 
@@ -149,32 +175,294 @@ vaadin-app-layout::part(navbar) {
   box-shadow: none;
   background: var(--st-bg-surface);
   padding: 0 16px;
-}
-
-vaadin-app-layout::part(drawer) {
-  width: 250px;
-  background: var(--st-bg-surface);
-  border-right: 1px solid var(--st-border);
-  padding-top: 0;
-  box-shadow: none;
+  box-sizing: border-box;
+  z-index: 10;
 }
 
 vaadin-app-layout [slot="drawer"] {
   padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.st-drawer-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--st-bg-surface);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Drawer toggle button (Hamburger / Sidebar toggle on all screen sizes) */
+vaadin-drawer-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  cursor: pointer;
+  color: var(--st-text-secondary);
+  border-radius: var(--st-radius);
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+vaadin-drawer-toggle:hover {
+  color: var(--st-text-primary);
+  background-color: var(--st-bg-surface-elevated);
+}
+
+/* Desktop > 1024px: Fully Responsive Collapsible Sidebar & Full-Screen Layout */
+@media (min-width: 1025px) {
+  vaadin-app-layout {
+    --vaadin-app-layout-drawer-overlay: false;
+    --vaadin-app-layout-drawer-width: var(--st-sidebar-width);
+    --_vaadin-app-layout-drawer-width: var(--st-sidebar-width);
+    transition: padding-inline-start 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Desktop Navbar: adapts smoothly to open or collapsed drawer */
+  vaadin-app-layout::part(navbar) {
+    height: 52px;
+    box-sizing: border-box;
+    transition: inset-inline-start 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Desktop Open State: sidebar docked at 260px, content & navbar offset by 260px */
+  vaadin-app-layout[drawer-opened] {
+    --vaadin-app-layout-drawer-offset-size: var(--st-sidebar-width);
+    padding-inline-start: var(--st-sidebar-width) !important;
+  }
+
+  vaadin-app-layout[drawer-opened]::part(drawer) {
+    width: var(--st-sidebar-width) !important;
+    min-width: var(--st-sidebar-width) !important;
+    max-width: var(--st-sidebar-width) !important;
+    background: var(--st-bg-surface);
+    border-right: 1px solid var(--st-border);
+    padding-top: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    display: flex !important;
+    flex-direction: column !important;
+    visibility: visible !important;
+    transform: translateX(0%) !important;
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 100 !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+  }
+
+  vaadin-app-layout[drawer-opened]::part(navbar) {
+    inset-inline-start: var(--st-sidebar-width) !important;
+    left: var(--st-sidebar-width) !important;
+    width: calc(100% - var(--st-sidebar-width)) !important;
+  }
+
+  /* When drawer is open on desktop, hide duplicate brand in navbar */
+  vaadin-app-layout[drawer-opened] .st-navbar-mobile-brand {
+    display: none !important;
+  }
+
+  /* Close/Collapse button inside drawer is visible and functional on desktop */
+  vaadin-app-layout[drawer-opened] .st-drawer-close-btn {
+    display: inline-flex !important;
+  }
+
+  /* Desktop Collapsed State: sidebar collapses off-screen, content & navbar expand to 100% ENTIRE SCREEN */
+  vaadin-app-layout:not([drawer-opened]) {
+    --vaadin-app-layout-drawer-offset-size: 0px !important;
+    padding-inline-start: 0px !important;
+    padding-left: 0px !important;
+  }
+
+  vaadin-app-layout:not([drawer-opened])::part(drawer) {
+    transform: translateX(-100%) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0px !important;
+    min-width: 0px !important;
+    max-width: 0px !important;
+    border-right: none !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+  }
+
+  vaadin-app-layout:not([drawer-opened])::part(navbar) {
+    inset-inline-start: 0px !important;
+    left: 0px !important;
+    width: 100% !important;
+  }
+
+  /* When collapsed on desktop, reveal the brand on the full-width navbar */
+  vaadin-app-layout:not([drawer-opened]) .st-navbar-mobile-brand {
+    display: inline-flex !important;
+  }
+
+  vaadin-app-layout:not([drawer-opened]) .st-drawer-close-btn {
+    display: none !important;
+  }
+}
+
+/* Tablet & Mobile <= 1024px: Overlay drawer, hamburger toggle, 0px offset */
+@media (max-width: 1024px) {
+  html, body {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative;
+  }
+
+  vaadin-app-layout,
+  vaadin-app-layout[drawer-opened] {
+    --vaadin-app-layout-drawer-overlay: true !important;
+    --vaadin-app-layout-drawer-width: min(280px, 80vw) !important;
+    --_vaadin-app-layout-drawer-width: min(280px, 80vw) !important;
+    --vaadin-app-layout-drawer-offset-size: 0px !important;
+    --vaadin-app-layout-drawer-offset-left: 0px !important;
+    --vaadin-app-layout-navbar-offset-left: 0px !important;
+    padding-inline-start: 0px !important;
+    padding-left: 0px !important;
+    margin-left: 0px !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Prevent content area from offsetting or overflowing horizontally */
+  vaadin-app-layout::part(content) {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  vaadin-app-layout::part(navbar) {
+    inset-inline-start: 0px !important;
+    left: 0px !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding: 0 12px;
+    box-sizing: border-box !important;
+  }
+
+  vaadin-drawer-toggle {
+    display: inline-flex !important;
+    margin-right: 4px;
+    cursor: pointer;
+    z-index: 20 !important;
+  }
+
+  .st-navbar-mobile-brand {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+  }
+
+  /* Closed state on mobile/tablet: occupies 0px horizontal space, hidden */
+  vaadin-app-layout:not([drawer-opened])::part(drawer) {
+    transform: translateX(-100%) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0px !important;
+    min-width: 0px !important;
+  }
+
+  /* Open state on mobile/tablet: floating overlay above content */
+  vaadin-app-layout[drawer-opened]::part(drawer) {
+    transform: translateX(0%) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    width: min(280px, 80vw) !important;
+    min-width: 240px !important;
+    max-width: 80vw !important;
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 1000 !important;
+    background: var(--st-bg-surface) !important;
+    border-right: 1px solid var(--st-border) !important;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.75) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* When drawer is opened on mobile, navbar is pushed below backdrop and does not intercept clicks */
+  vaadin-app-layout[drawer-opened]::part(navbar) {
+    z-index: 100 !important;
+    pointer-events: none !important;
+  }
+
+  vaadin-app-layout[drawer-opened] .st-navbar {
+    pointer-events: none !important;
+  }
+
+  /* Drawer slotted content and wrapper must sit above backdrop */
+  vaadin-app-layout[drawer-opened] [slot="drawer"],
+  vaadin-app-layout[drawer-opened] .st-drawer-wrapper {
+    position: relative !important;
+    z-index: 1001 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Close button inside drawer */
+  .st-drawer-close-btn {
+    display: inline-flex !important;
+    position: relative !important;
+    z-index: 1002 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+
+  .st-drawer-close-btn * {
+    pointer-events: none !important;
+  }
+
+  vaadin-app-layout[drawer-opened]::part(backdrop) {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background-color: rgba(10, 8, 14, 0.75) !important;
+    backdrop-filter: blur(2px) !important;
+    z-index: 999 !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
+  vaadin-app-layout:not([drawer-opened])::part(backdrop) {
+    display: none !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
 }
 
 /* ===== Drawer Brand Header ===== */
 .st-drawer-brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--st-border);
+  padding: 0 16px;
+  height: 52px;
   min-height: 52px;
+  max-height: 52px;
+  border-bottom: 1px solid var(--st-border);
   box-sizing: border-box;
+  flex-shrink: 0;
+}
+.st-drawer-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 .st-drawer-brand svg {
   color: var(--st-copper);
@@ -191,6 +479,47 @@ vaadin-app-layout [slot="drawer"] {
   align-items: center;
   gap: 8px;
 }
+.st-drawer-close-btn {
+  display: none;
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--st-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--st-text-secondary);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.st-drawer-close-btn:hover {
+  background: var(--st-bg-surface-elevated);
+  color: var(--st-text-primary);
+  border-color: var(--st-copper);
+}
+.st-drawer-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.st-drawer-close-btn * {
+  pointer-events: none !important;
+}
+.st-drawer-nav-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  padding: 8px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.st-nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .st-brand-tag {
   font-size: 9px;
   font-weight: 700;
@@ -201,6 +530,7 @@ vaadin-app-layout [slot="drawer"] {
   border: 1px solid var(--st-copper-border);
   padding: 1px 5px;
   border-radius: 2px;
+  line-height: 1.2;
 }
 
 /* ===== Drawer Nav Links (Fix for Sidebar Clipping) ===== */
@@ -229,6 +559,7 @@ vaadin-app-layout [slot="drawer"] {
   border-left: 2px solid transparent;
   transition: background-color var(--st-transition), color var(--st-transition), border-color var(--st-transition);
   cursor: pointer;
+  box-sizing: border-box;
 }
 .st-nav-link:hover {
   background-color: var(--st-bg-hover);
@@ -264,6 +595,7 @@ vaadin-app-layout [slot="drawer"] {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  box-sizing: border-box;
 }
 
 /* ===== Navbar Header ===== */
@@ -274,13 +606,41 @@ vaadin-app-layout [slot="drawer"] {
   height: 100%;
   gap: 12px;
 }
+.st-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.st-navbar-mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+.st-navbar-mobile-brand svg {
+  width: 18px;
+  height: 18px;
+  color: var(--st-copper);
+  flex-shrink: 0;
+}
+.st-navbar-mobile-brand .st-brand-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--st-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
 .st-navbar-status {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
   color: var(--st-text-secondary);
-  margin-left: 8px;
+  margin-left: 6px;
+  white-space: nowrap;
 }
 .st-pulse-dot {
   width: 6px;
@@ -289,6 +649,7 @@ vaadin-app-layout [slot="drawer"] {
   background-color: var(--st-jade);
   box-shadow: 0 0 0 2px rgba(79, 174, 145, 0.25);
   animation: st-pulse 2s infinite ease-in-out;
+  flex-shrink: 0;
 }
 @keyframes st-pulse {
   0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 174, 145, 0.5); }
@@ -301,11 +662,18 @@ vaadin-app-layout [slot="drawer"] {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+}
+.st-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .st-navbar-username {
   font-size: 12px;
   color: var(--st-text-primary);
   font-weight: 600;
+  white-space: nowrap;
 }
 .st-avatar {
   width: 26px;
@@ -319,6 +687,7 @@ vaadin-app-layout [slot="drawer"] {
   justify-content: center;
   font-weight: 600;
   font-size: 11px;
+  flex-shrink: 0;
 }
 .st-navbar-logout {
   font-size: 11px;
@@ -334,6 +703,7 @@ vaadin-app-layout [slot="drawer"] {
   align-items: center;
   gap: 5px;
   height: 26px;
+  white-space: nowrap;
 }
 .st-navbar-logout:hover {
   background: var(--st-bg-hover);
@@ -459,7 +829,21 @@ vaadin-app-layout [slot="drawer"] {
   background: var(--st-bg-surface);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.st-card-padded {
+  padding: 24px 28px;
+  box-sizing: border-box;
+}
+@media (max-width: 480px) {
+  .st-card-padded {
+    padding: 14px !important;
+  }
 }
 
 vaadin-grid {
@@ -467,6 +851,9 @@ vaadin-grid {
   font-size: 12px;
   border: none !important;
   background: var(--st-bg-surface);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 vaadin-grid::part(header-cell) {
@@ -914,8 +1301,19 @@ vaadin-combo-box::part(label) {
 
 /* ===== Responsive Breakpoint Rules ===== */
 @media (max-width: 1024px) {
+  .st-page {
+    padding: 16px;
+  }
   .st-stats-row {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .st-split-section {
+    flex-direction: column !important;
+  }
+  .st-split-section > * {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
   }
 }
 
@@ -925,23 +1323,279 @@ vaadin-combo-box::part(label) {
 }
 
 @media (max-width: 768px) {
-  .st-stats-row {
-    grid-template-columns: 1fr 1fr;
+  .st-page {
+    padding: 12px 14px;
   }
   .st-header-container {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .st-header-actions {
+    width: 100%;
+  }
+  .st-header-actions > * {
+    flex: 1;
+  }
+  .st-header-actions .st-btn {
+    width: 100%;
+  }
+  .st-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .st-allocation-legend {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .st-navbar {
+    padding: 0 8px;
+    gap: 8px;
+  }
+  .st-navbar-status {
+    margin-left: 4px;
+  }
+  .st-pulse-dot {
+    width: 5px;
+    height: 5px;
+  }
+  .st-navbar-user {
+    gap: 6px;
+  }
+  .st-navbar-username {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 480px) {
+  .st-page {
+    padding: 10px 10px;
+  }
+  .st-page-title {
+    font-size: 16px;
+  }
+  .st-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .st-stat-card {
+    padding: 8px 10px;
+    min-height: 60px;
+  }
+  .st-stat-value {
+    font-size: 15px;
+  }
+  .st-stat-label {
+    font-size: 9px;
+  }
+  .st-stat-subtext {
+    font-size: 9px;
+  }
+  .st-navbar-status span:last-child {
+    display: none;
+  }
+  .st-navbar-status {
+    margin-left: 0;
+  }
+  .st-navbar-username {
+    display: none;
+  }
+  .st-navbar-logout {
+    padding: 4px 6px;
+  }
+  .st-navbar-logout span {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
   .st-stats-row {
     grid-template-columns: 1fr;
   }
   .st-page {
-    padding: 10px;
-  }
-  vaadin-dialog-overlay::part(overlay) {
-    width: 95vw !important;
+    padding: 8px;
   }
 }
+
+/* Modals & Dialogs on Mobile */
+vaadin-dialog-overlay::part(overlay) {
+  max-width: 95vw !important;
+  width: auto !important;
+  box-sizing: border-box !important;
+}
+vaadin-dialog-overlay::part(content) {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden;
+  padding: 16px !important;
+}
+
+/* ==========================================================================
+   INTERACTIVE CANDLESTICK CHART (Lightweight Charts + SimTrade Theme)
+   ========================================================================== */
+trading-chart {
+  display: block;
+  width: 100%;
+}
+
+.st-chart-card {
+  background: var(--st-bg-surface);
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  margin-bottom: 16px;
+}
+
+.st-chart-compact {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.st-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.st-chart-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.st-chart-symbol {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--st-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.st-chart-company {
+  font-size: 12px;
+  color: var(--st-text-secondary);
+}
+
+.st-chart-badge-paper {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(209, 139, 90, 0.12);
+  color: var(--st-accent);
+  border: 1px solid rgba(209, 139, 90, 0.35);
+  text-transform: uppercase;
+}
+
+.st-chart-tz-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--st-bg-surface-elevated);
+  color: var(--st-text-secondary);
+  border: 1px solid var(--st-border);
+}
+
+.st-ohlc-time {
+  color: var(--st-text-secondary);
+  font-weight: 500;
+}
+
+.st-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.st-chart-legend-muted {
+  color: var(--st-text-muted);
+  font-style: italic;
+}
+
+.st-ohlc-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--st-text-primary);
+}
+
+.st-ohlc-label {
+  color: var(--st-text-secondary);
+  font-weight: 600;
+}
+
+.st-chart-timeframes {
+  display: inline-flex;
+  align-items: center;
+  background: var(--st-bg-surface-secondary);
+  border: 1px solid var(--st-border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.st-tf-btn {
+  background: transparent;
+  border: none;
+  color: var(--st-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.st-tf-btn:hover {
+  color: var(--st-text-primary);
+  background: var(--st-bg-hover);
+}
+
+.st-tf-btn.active {
+  color: #FFFFFF;
+  background: var(--st-copper);
+}
+
+.st-chart-canvas-container {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .st-chart-card {
+    padding: 10px;
+  }
+  .st-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .st-chart-legend {
+    gap: 6px;
+    font-size: 10px;
+  }
+  .st-tf-btn {
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+}
+

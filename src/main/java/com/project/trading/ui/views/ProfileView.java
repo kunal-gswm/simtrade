@@ -65,8 +65,8 @@ public class ProfileView extends Div {
         add(headerContainer);
 
         Div card = new Div();
-        card.addClassName("st-table-surface");
-        card.getStyle().set("max-width", "640px").set("padding", "28px 32px").set("box-sizing", "border-box");
+        card.addClassNames("st-table-surface", "st-card-padded");
+        card.getStyle().set("max-width", "640px").set("width", "100%").set("box-sizing", "border-box");
 
         // Profile Details
         H2 secTitle = new H2("Trader Profile");

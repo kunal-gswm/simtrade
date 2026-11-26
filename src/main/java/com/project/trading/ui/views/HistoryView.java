@@ -169,13 +169,9 @@ public class HistoryView extends Div {
         UI ui = attachEvent.getUI();
         loadData();
 
-        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(trade -> {
-            ui.access(this::loadData);
+        tradeListenerRegistration = MarketDataBroadcaster.registerTradeListener(ui, trade -> {
+            loadData();
         });
-
-        // Controlled 3-second fallback polling
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> loadData());
     }
 
     @Override
@@ -184,7 +180,6 @@ public class HistoryView extends Div {
             tradeListenerRegistration.remove();
             tradeListenerRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1);
         super.onDetach(detachEvent);
     }
 

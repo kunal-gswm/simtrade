@@ -129,10 +129,13 @@ public class PortfolioView extends Div {
                 .setHeader("Company Name").setSortable(true).setAutoWidth(true).setFlexGrow(1);
 
         grid.addComponentColumn(row -> {
-            Span shares = new Span(String.valueOf(row.quantity));
+            String sharesStr = row.reservedQuantity > 0
+                    ? row.availableQuantity + " / " + row.quantity
+                    : String.valueOf(row.quantity);
+            Span shares = new Span(sharesStr);
             shares.addClassName("tabular-num");
             return shares;
-        }).setHeader("Shares").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
+        }).setHeader("Avail / Total Shares").setSortable(true).setTextAlign(ColumnTextAlign.END).setAutoWidth(true);
 
         grid.addComponentColumn(row -> {
             Span avg = new Span(currencyFormat.format(row.avgBuyPrice));
@@ -217,24 +220,20 @@ public class PortfolioView extends Div {
         // Immediate load
         updateData();
 
-        // Broadcast subscription for live real-time price changes & trades
-        broadcastRegistration = MarketDataBroadcaster.register(new MarketDataBroadcaster.BroadcastListener() {
+        // Broadcast subscription for live real-time push price changes & trades with UI lifecycle binding
+        broadcastRegistration = MarketDataBroadcaster.register(ui, new MarketDataBroadcaster.BroadcastListener() {
             @Override
             public void onPriceUpdate(MarketDataBroadcaster.PriceUpdate event) {
-                ui.access(() -> updateData());
+                updateData();
             }
 
             @Override
             public void onTradeUpdate(MarketDataBroadcaster.TradeUpdate event) {
                 if (event.trade() != null && currentUser != null && event.trade().getUserId() == currentUser.getId()) {
-                    ui.access(() -> updateData());
+                    updateData();
                 }
             }
         });
-
-        // Fallback polling
-        ui.setPollInterval(3000);
-        ui.addPollListener(e -> updateData());
     }
 
     @Override
@@ -243,7 +242,6 @@ public class PortfolioView extends Div {
             broadcastRegistration.remove();
             broadcastRegistration = null;
         }
-        detachEvent.getUI().setPollInterval(-1);
         super.onDetach(detachEvent);
     }
 
@@ -282,7 +280,11 @@ public class PortfolioView extends Div {
             PortfolioService.PortfolioSummary summary = portfolioService.getSummaryForUser(currentUser.getId());
 
             netWorthValue.setText(currencyFormat.format(summary.netWorth));
-            cashValue.setText(currencyFormat.format(summary.cash));
+            if (summary.reservedCash.compareTo(BigDecimal.ZERO) > 0) {
+                cashValue.setText(currencyFormat.format(summary.availableCash) + " (₹" + summary.reservedCash + " res)");
+            } else {
+                cashValue.setText(currencyFormat.format(summary.cash));
+            }
             investedValue.setText(currencyFormat.format(summary.totalInvested));
             holdingsValue.setText(currencyFormat.format(summary.totalCurrentValue));
 
