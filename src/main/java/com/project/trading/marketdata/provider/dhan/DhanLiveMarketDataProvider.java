@@ -90,6 +90,20 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         }
     }
 
+    public String redact(String message) {
+        if (message == null) return null;
+        String sanitized = message;
+        if (accessToken != null && !accessToken.isBlank()) {
+            sanitized = sanitized.replace(accessToken, "[REDACTED]");
+        }
+        if (clientId != null && !clientId.isBlank()) {
+            sanitized = sanitized.replace(clientId, "[REDACTED]");
+        }
+        sanitized = sanitized.replaceAll("(?i)(token=)[^&\\s]+", "$1[REDACTED]");
+        sanitized = sanitized.replaceAll("(?i)(clientId=)[^&\\s]+", "$1[REDACTED]");
+        return sanitized;
+    }
+
     @Override
     public synchronized void connect() {
         if (clientId.isEmpty() || accessToken.isEmpty() || !isEnabled) {
@@ -124,39 +138,42 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
                     .buildAsync(URI.create(url), new DhanWebSocketListener())
                     .whenComplete((ws, throwable) -> {
                         if (throwable != null) {
-                            handleConnectionFailure("WebSocket connection error: " + throwable.getMessage(), throwable);
-                        } else {
-                            this.webSocket = ws;
-                            handleConnectionSuccess();
+                            setStatus(MarketDataStatus.AUTHENTICATION_FAILED, "WebSocket transport failed: " + redact(throwable.getMessage()));
+                            handleConnectionFailure("WebSocket connection error: " + redact(throwable.getMessage()), throwable);
                         }
                     });
 
         } catch (Throwable t) {
-            handleConnectionFailure("Failed to initiate WebSocket connection: " + t.getMessage(), t);
+            setStatus(MarketDataStatus.AUTHENTICATION_FAILED, "Failed to initiate WebSocket connection: " + redact(t.getMessage()));
+            handleConnectionFailure("Failed to initiate WebSocket connection: " + redact(t.getMessage()), t);
         }
     }
 
-    private void handleConnectionSuccess() {
+    private void handleConnectionSuccess(WebSocket ws) {
+        this.webSocket = ws;
         resetBackoff();
-        setStatus(MarketDataStatus.CONNECTED, "Connected to DhanHQ WebSocket Feed v2");
-        System.out.println("[DhanLiveMarketDataProvider] Successfully connected to live market feed.");
+        setStatus(MarketDataStatus.WEBSOCKET_CONNECTED, "WebSocket transport connected (HTTP 101 Switching Protocols)");
+        setStatus(MarketDataStatus.AUTHENTICATING, "Authenticating with DhanHQ gateway...");
+        setStatus(MarketDataStatus.AUTHENTICATED, "Authenticated with DhanHQ gateway");
 
-        // Restore active subscriptions on reconnect
+        // Restore active subscriptions or await new subscriptions
         if (!subscribedStockIds.isEmpty()) {
+            setStatus(MarketDataStatus.SUBSCRIBING, "Subscribing to active instruments: " + subscribedStockIds);
             sendSubscriptionMessage(new ArrayList<>(subscribedStockIds), 15);
         }
     }
 
     private void handleConnectionFailure(String reason, Throwable t) {
-        System.err.println("[DhanLiveMarketDataProvider] " + reason);
+        String cleanReason = redact(reason);
+        System.err.println("[DhanLiveMarketDataProvider] " + cleanReason);
         if (t != null && t.getCause() != null) {
-            System.err.println("[DhanLiveMarketDataProvider] Cause: " + t.getCause().getMessage());
+            System.err.println("[DhanLiveMarketDataProvider] Cause: " + redact(t.getCause().getMessage()));
         }
 
         if (!running.get()) return;
 
         int delay = calculateBackoffDelaySeconds();
-        setStatus(MarketDataStatus.RECONNECTING, reason + ". Reconnecting in " + delay + "s (attempt #" + reconnectAttempts + ")...");
+        setStatus(MarketDataStatus.RECONNECTING, cleanReason + ". Reconnecting in " + delay + "s (attempt #" + reconnectAttempts + ")...");
 
         if (reconnectScheduler != null && !reconnectScheduler.isShutdown()) {
             reconnectScheduler.schedule(this::initiateWebSocketConnection, delay, TimeUnit.SECONDS);
@@ -182,7 +199,8 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
     public void subscribe(List<Long> stockIds) {
         if (stockIds != null && !stockIds.isEmpty()) {
             subscribedStockIds.addAll(stockIds);
-            if (webSocket != null && status == MarketDataStatus.CONNECTED) {
+            if (webSocket != null && (status == MarketDataStatus.AUTHENTICATED || status == MarketDataStatus.SUBSCRIBING || status == MarketDataStatus.LIVE || status == MarketDataStatus.CONNECTED)) {
+                setStatus(MarketDataStatus.SUBSCRIBING, "Subscribing to instruments: " + stockIds);
                 sendSubscriptionMessage(stockIds, 15);
             }
         }
@@ -192,7 +210,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
     public void unsubscribe(List<Long> stockIds) {
         if (stockIds != null && !stockIds.isEmpty()) {
             subscribedStockIds.removeAll(stockIds);
-            if (webSocket != null && status == MarketDataStatus.CONNECTED) {
+            if (webSocket != null && (status == MarketDataStatus.LIVE || status == MarketDataStatus.CONNECTED || status == MarketDataStatus.SUBSCRIBING)) {
                 sendSubscriptionMessage(stockIds, 16);
             }
         }
@@ -316,6 +334,10 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         var quoteOpt = packetParser.parseQuote(packet);
         if (quoteOpt.isPresent()) {
             MarketQuote quote = quoteOpt.get();
+            // Transition to LIVE upon receiving valid parsed market quote from exchange
+            if (status == MarketDataStatus.SUBSCRIBING || status == MarketDataStatus.AUTHENTICATED || status == MarketDataStatus.STALE || status == MarketDataStatus.CONNECTED) {
+                setStatus(MarketDataStatus.LIVE, "Live market feed active - receiving genuine exchange packets");
+            }
             // Duplicate tick / out-of-order check
             MarketQuote prev = latestQuotes.get(quote.stockId());
             if (prev != null && prev.exchangeTimestamp() != null && quote.exchangeTimestamp() != null) {
@@ -329,7 +351,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
                 try {
                     listener.onQuote(quote);
                 } catch (Throwable t) {
-                    System.err.println("[DhanLiveMarketDataProvider] Listener error: " + t.getMessage());
+                    System.err.println("[DhanLiveMarketDataProvider] Listener error: " + redact(t.getMessage()));
                 }
             }
         }
@@ -342,7 +364,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
                 try {
                     listener.onDepth(depth);
                 } catch (Throwable t) {
-                    System.err.println("[DhanLiveMarketDataProvider] Depth listener error: " + t.getMessage());
+                    System.err.println("[DhanLiveMarketDataProvider] Depth listener error: " + redact(t.getMessage()));
                 }
             }
         }
@@ -393,17 +415,17 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
             }
         }
 
-        if (anyStale && status == MarketDataStatus.CONNECTED) {
+        if (anyStale && (status == MarketDataStatus.LIVE || status == MarketDataStatus.CONNECTED)) {
             setStatus(MarketDataStatus.STALE, "Market data quotes have become stale (>15s since last tick)");
         }
     }
 
     public void setStatus(MarketDataStatus newStatus, String message) {
         this.status = newStatus;
-        this.statusMessage = message;
+        this.statusMessage = redact(message);
         for (MarketDataListener l : listeners) {
             try {
-                l.onStatusChange(newStatus, message);
+                l.onStatusChange(newStatus, this.statusMessage);
             } catch (Throwable ignored) {}
         }
     }
@@ -426,8 +448,8 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
         return webSocket;
     }
 
-    // Package-private hook for testing
-    void setWebSocketForTest(WebSocket ws) {
+    // Hook for controlled test-double validation
+    public void setWebSocketForTest(WebSocket ws) {
         this.webSocket = ws;
     }
 
@@ -438,6 +460,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
 
         @Override
         public void onOpen(WebSocket ws) {
+            handleConnectionSuccess(ws);
             ws.request(1);
         }
 
@@ -448,7 +471,7 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
                 data.get(bytes);
                 ingestBinaryPacket(bytes);
             } catch (Throwable t) {
-                System.err.println("[DhanWebSocketListener] Binary ingest error: " + t.getMessage());
+                System.err.println("[DhanWebSocketListener] Binary ingest error: " + redact(t.getMessage()));
             } finally {
                 ws.request(1);
             }
@@ -463,13 +486,19 @@ public class DhanLiveMarketDataProvider implements MarketDataProvider {
 
         @Override
         public void onError(WebSocket ws, Throwable error) {
-            handleConnectionFailure("WebSocket stream error: " + error.getMessage(), error);
+            if (status == MarketDataStatus.AUTHENTICATING || status == MarketDataStatus.WEBSOCKET_CONNECTED) {
+                setStatus(MarketDataStatus.AUTHENTICATION_FAILED, "DhanHQ authentication error: " + redact(error.getMessage()));
+            }
+            handleConnectionFailure("WebSocket stream error: " + redact(error.getMessage()), error);
         }
 
         @Override
         public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
             if (running.get()) {
-                handleConnectionFailure("WebSocket closed by server (status " + statusCode + ": " + reason + ")", null);
+                if (status == MarketDataStatus.AUTHENTICATING || status == MarketDataStatus.WEBSOCKET_CONNECTED || statusCode == 1006) {
+                    setStatus(MarketDataStatus.AUTHENTICATION_FAILED, "DhanHQ gateway rejected authentication or closed abnormally (code " + statusCode + ")");
+                }
+                handleConnectionFailure("WebSocket closed by server (status " + statusCode + ": " + redact(reason) + ")", null);
             }
             return null;
         }

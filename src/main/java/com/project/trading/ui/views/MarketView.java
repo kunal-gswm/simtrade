@@ -343,9 +343,14 @@ public class MarketView extends Div {
 
     private void updateFeedBadge() {
         MarketDataConnectionManager mgr = MarketDataConnectionManager.getInstance();
-        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER && mgr.getStatus() == MarketDataStatus.CONNECTED) {
-            feedStatusBadge.setText("● LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED"));
-            feedStatusBadge.getStyle().set("color", "var(--st-jade)").set("border-color", "var(--st-jade)");
+        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER) {
+            if (mgr.getStatus() == MarketDataStatus.LIVE) {
+                feedStatusBadge.setText("● LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED"));
+                feedStatusBadge.getStyle().set("color", "var(--st-jade)").set("border-color", "var(--st-jade)");
+            } else {
+                feedStatusBadge.setText("● LIVE: " + mgr.getStatus().getLabel().toUpperCase());
+                feedStatusBadge.getStyle().set("color", "var(--st-ruby)").set("border-color", "var(--st-ruby)");
+            }
         } else if (mgr.getStatus() == MarketDataStatus.NOT_CONFIGURED) {
             feedStatusBadge.setText("● LIVE FEED: NOT CONFIGURED");
             feedStatusBadge.getStyle().set("color", "var(--st-ruby)").set("border-color", "var(--st-ruby)");

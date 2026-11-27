@@ -115,12 +115,14 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         MarketDataConnectionManager mgr = MarketDataConnectionManager.getInstance();
         String badgeText;
-        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER && mgr.getStatus() == MarketDataStatus.CONNECTED) {
-            badgeText = "LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED");
+        if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER) {
+            if (mgr.getStatus() == MarketDataStatus.LIVE) {
+                badgeText = "LIVE: " + (mgr.getActiveProvider() != null ? mgr.getActiveProvider().getProviderName().toUpperCase() : "FEED");
+            } else {
+                badgeText = "LIVE: " + mgr.getStatus().getLabel().toUpperCase();
+            }
         } else if (mgr.getStatus() == MarketDataStatus.NOT_CONFIGURED) {
             badgeText = "LIVE FEED NOT CONFIGURED";
-        } else if (mgr.getSourceType() == MarketDataSource.LIVE_PROVIDER) {
-            badgeText = "LIVE: " + mgr.getStatus().name();
         } else {
             badgeText = "SIMULATION LIVE";
         }

@@ -2,15 +2,25 @@ package com.project.trading.marketdata.model;
 
 /**
  * Explicit connection lifecycle states for market data feeds.
+ * Distinguishes transport readiness, authentication progression, subscription state,
+ * and genuine live exchange delivery.
  */
 public enum MarketDataStatus {
-    CONNECTED("Connected", true),
-    CONNECTING("Connecting...", false),
+    NOT_CONFIGURED("Not Configured", false),
     DISCONNECTED("Disconnected", false),
-    RECONNECTING("Reconnecting...", false),
+    CONNECTING("Connecting...", false),
+    WEBSOCKET_CONNECTED("Transport Connected", false),
+    AUTHENTICATING("Authenticating...", false),
+    AUTHENTICATED("Authenticated", false),
+    SUBSCRIBING("Subscribing...", false),
+    LIVE("Live", true),
     STALE("Feed Stale", false),
-    ERROR("Feed Error", false),
-    NOT_CONFIGURED("Not Configured", false);
+    AUTHENTICATION_FAILED("Authentication Failed", false),
+    RECONNECTING("Reconnecting...", false),
+
+    // Compatibility aliases for simulation and existing tests
+    CONNECTED("Connected", true),
+    ERROR("Feed Error", false);
 
     private final String label;
     private final boolean orderSubmissionAllowed;
